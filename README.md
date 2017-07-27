@@ -16,7 +16,7 @@ MXNet	C++	Python/R/Julia/Go	CPU/GPU/Mobile	v   	v	    v
 pan.baidu.com/s/ldedlxbf
 python-3.5.2 +vc-redist.x64
 
-为了介绍TensorFlow的各种用法，我们将使用deep_recommend_system这个开源项目，
+为了介绍TensorFlow的各种用法，我们将使用<deep_recommend_system>这个开源项目，
 它实现了TFRecords、QueueRunner、Checkpoint、TensorBoard、Inference、GPU支持、
 分布式训练和多层神经网络模型等特性，而且可以轻易拓展实现Wide and deep等模型，
 在实际的项目开发中可以直接下载使用。
