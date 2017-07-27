@@ -1,0 +1,12 @@
+分布式TensorFlow中ps、worker、in-graph、between-graph、synchronous training和asynchronous training的概念
+在大数据和分布式的场景下一般使用异步训练
+通过Google Cloud ML服务，我们可以把TensorFlow应用代码直接提交到云端运行，甚至可以把训练好的模型直接部署在云上，通过API就可以直接访问
+
+1. 准备训练数据
+2. 接受命令行参数
+3. 定义神经网络模型
+4. 使用不同的优化算法
+5. Online learning与Continuous learning
+6. 使用TensorBoard优化参数
+7. 分布式TensorFlow应用
+8. Cloud Machine Learning
