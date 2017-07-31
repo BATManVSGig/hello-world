@@ -25,4 +25,37 @@ TF的四大核心概念：计算图，操作，变量，会话。
 可以通过注册机制加入新的运算操作符或者为已有的运算操作添加新的计算核。
 标量运算，向量运算，矩阵运算，带状态的运算，神经网络组件，存储，恢复（tf.train.Saver对象），队列及同步运算，控制流
 
+ 准备软件包：（官网或者清华网站可下载）
+tensorflow的windows版本，至少要python3.5，下面是python3.5对应的软件包
+tensorflow-1.2.1-cp35-cp35m-win_amd64.whl，Anaconda3-4.2.0-Windows-x86_64.exe
+基本步骤：anaconda——>依赖库——>tensorflow
+1. 安装anaconda软件包，傻瓜式安装就可以了。
+2. 配置代理文件，C:\Users\y00166059\.condarc
+3. 打开anaconda prompt，依次执行下面命令
+conda create --name tf python=3.5  （创建一个名为tf的环境）
+activate tf  （激活环境）
+conda install jupyter （在tf里安装jupyter notebook）
+conda install scipy （在tf里安装数值计算库scipy）
+pip install tensorflow-1.2.1-cp35-cp35m-win_amd64.whl 
+最后一句pip安装可能出现找不到代理的错误：
+3.1 在线安装，配置pip代理的镜像，在C:\Users\y00166059（y00166059替换成自己的工号）下新建pip文件夹，其下新增pip.ini文件（见附件）。
+文件内容是公司的pip镜像。
+[global]
+trusted-host=rnd-mirrors.huawei.com
+index-url=http://rnd-mirrors.huawei.com/pypi/simple/
+这样会自动下载依赖库，快速搞定。
+3.2 离线安装，下载缺少的依赖库，下载方式，如上图，根据提示信息打开网页pypi.python.org/simple/html5lib，下载html5lib-0.9999999这个版本。
+因为每次错误提示信息里只显示一个，下载一个更新好后，再执行安装才会提示另一个。并且，不是每一个依赖库都能找到whl包。pypi网站找不到whl包时，可执行conda install XXX，到镜像网站上自动查找。这样还是找不到，就只能使用源码包了，安装方法要注意。
+whl包，执行pip install *.whl即可；
+源码包，进入源码目录下，执行python setup.py install，必须带python，如果直接执行setup.py install，就会安装到环境外面，云计算上的python2.7目录里了（ci需要，一般都装了这个版本），带python命令字保证安装到当前环境tensorflow的python3.5目录下。
+下载好全部依赖库，并成功更新后，如下
+4. 如果不使用了，去激活环境deactivate tf，删除“软件安装目录\envs\tf”文件夹。
  
+检验：
+在anaconda prompt、jupyter或者spyder下，执行下面代码
+import tensorflow as tf
+hello = tf.constant('Hello, TensorFlow!')
+sess = tf.Session()
+print(sess.run(hello))
+返回结果：
+b'Hello, TensorFlow!'
