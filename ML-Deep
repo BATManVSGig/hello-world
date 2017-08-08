@@ -59,3 +59,11 @@ sess = tf.Session()
 print(sess.run(hello))
 返回结果：
 b'Hello, TensorFlow!'
+
+Spark,PMLS,Tensorflow(MXNet)
+spark的用户通过建立对有向无环图上RDD的转换或者运行操作来实现计算。
+pmls是为机器学期量身打造的平台，通过引入参数服务器抽象概念来处理机器学习训练的频繁迭代。
+TF利用有向图的节点和边来实现计算。当你在TF中使用（参数服务器）来实现对模型的训练。
+
+Caffe2的各类模型可以在官网的Model Zoo（https://caffe2.ai/docs/zoo.html）
+
