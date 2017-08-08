@@ -65,5 +65,12 @@ spark的用户通过建立对有向无环图上RDD的转换或者运行操作来
 pmls是为机器学期量身打造的平台，通过引入参数服务器抽象概念来处理机器学习训练的频繁迭代。
 TF利用有向图的节点和边来实现计算。当你在TF中使用（参数服务器）来实现对模型的训练。
 
-Caffe2的各类模型可以在官网的Model Zoo（https://caffe2.ai/docs/zoo.html）
+Caffe2的各类模型可以在官网的Model Zoo（https://caffe2.ai/docs/zoo.html） 
+Caffe相比于Tensorflow更加专精于计算机视觉（CV），性能更优,如果是做自然语言处理（NLP），Tensorflow更适合.
 
+在Caffe2的github上有一个主题专门讨论了两者的关系（https://github.com/caffe2/caffe2/issues/274）。 
+Caffe2可以认为是贾扬清对Caffe的重新思考和重构（http://tutorial.caffe.berkeleyvision.org/caffe-cvpr15-improving.pdf )。 
+Caffe2采用了无框架（unframework）的思想，即专注开发核心的部件（例如Gloo, NNPACK, FAISS ）这些部件可以被所有深度学习框架复用，增加了系统的灵活性。
+
+计算机图形显示技术：
+Vulkan(支持android原生调用),Nsight
