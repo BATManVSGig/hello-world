@@ -74,3 +74,21 @@ Caffe2采用了无框架（unframework）的思想，即专注开发核心的部
 
 计算机图形显示技术：
 Vulkan(支持android原生调用),Nsight
+
+
+特征向量介绍
+我们的特征向量转化，使用了三种方法，也是目前应对字符串比较好的方法选择。
+基于word2vec的特征向量
+基于词袋的特征向量
+基于fofe的特征向量
+基于word2vec的特征向量
+word2vec可以根据模型把词汇转化成一个多维的特征向量，在构建语句的特征时，我们采用暴力的向量相加的方式。
+word2vec在自然语言的实验中，可以很好的表示词语见的关系。具体可以参考维基百科语料中的词语相似度探索
+基于词袋的特征向量
+词袋向量，我们在天眼实验室的攻击平台上，挑选了在SQL注入中最常出现的250个词汇，构建词袋模型。
+词袋模型的参考 BoW（词袋）模型详细介绍http://blog.csdn.net/u010213393/article/details/40987945
+基于FOFE的特征向量
+FOFE是一种简单精妙的rule-base编码方式。通俗的说就是，在one-hot的基础上利用了数值的大小表明了词的位置信息的一种编码形式。我们基于上面词袋模型的基础，加入了FOFE算法。
+FOFE算法的具体论文，来自江辉老师。 
+The Fixed-Size Ordinally-Forgetting Encoding Method for Neural Network Language Models
+http://blog.csdn.net/u010213393/article/details/40987945
