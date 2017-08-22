@@ -1,0 +1,19 @@
+首先是传感器，DeepMind更多会使用视觉传感器让机器与环境互动，当然，如果你愿意，也可以使用语音、触觉等方式。所以这类Agent通常通过自己的观察来对环境建模。但是这里有个问题，真是环境通常是充满噪声、干扰、不完整的，所以需要Agent尽最大努力去预测周围到底是什么样的。
+一旦这个环境模型建立，就要开始第二步了：如何在这个环境中做出最好的行为决策。当然，行为与环境间的互动可能是成功的，也可能是失败的，这写结果都会被实时纳入Agent的观察过程，这也就是强化学习的过程。
+强化学习特点：
+奖励延迟
+当前决策对后续有影响
+追求累积收益最大化
+深度学习解决感知问题
+强化学习解决决策问题
+强化学习是一个通过交互产生智能的形式，淡化了原有的训练数据，测试数据的概念。强调了Agent，Environment，Action，Feedback
+
+
+ Mobileye：强化学习是Mobieye驾驶策略决策的主要方法
+强化学习：
+http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching.html
+http://www.bicmr.org/~wenzw/bigdata2017.html
+http://rll.berkeley.edu/deeprlcourse/
+
+Keras  OpenAI Gym
+riselab   DeepMind Lab 
