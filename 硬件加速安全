@@ -14,6 +14,17 @@ ncnn 从设计之初深刻考虑手机端的部署和使用。
 基于 ncnn，开发者能够将深度学习算法轻松移植到手机端高效执行，开发出人工智能 APP，将 AI 带到你的指尖。
 ncnn 目前已在腾讯多款应用中使用
 
+我们有两个CC1101收发器连接在ardunio nano上，任何手机都可以为nano供电，根据其收发强度，其有效范围可达10米。
+这个没有太多技术含量，我修改了panstamp库来使其在315Mhz上工作，因为原本的库在433Mhz，868Mhz和915Mhz上工作，而这些频段我们都不需要。
+接下来我们需要找出315频段的频谱中的highbyte，middlebyte和lowbyte。
+低，中，高是三个寄存器，其值可以改变工作频率。我使用的是12：29：137。
+
+当受害者按下解锁按钮时，信号首先被拦截，然后干扰信号（我们称之为signalX）被捕获并保存，随后我们将使用GNURadio来从原始的钥匙信号信号（我们称之为signalY）中分离出我们创建的实际干扰信号。
+当受害者再次按下解锁按钮时，我们原来保存的signalX就被发送给汽车，signalY在稍后可以重放来解锁同一辆车。当信号被捕获时，你需要进行逆向才能发回。
+我使用GNURadio接收并解调原来的ASK信号，将其变成二进制调制波形，之后我可以用来重放。
+振幅偏移调变（ASK）是振幅调制的一种形式，表示数字数据作为载波振幅的变化。
+在ASK系统中，通过在T秒的持续时间内传送固定幅度载波和固定频率来表示二进制1。如果信号值1不发送，则为0。
+
 https://github/slavivanov/cats_dogos_kaggle
 Broadcom官网：
 http://www.avagotech.com/products/storage/raid-controllers/megaraid-sas-9361-8i#tab-archive-drivers3-abc
