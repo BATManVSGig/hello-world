@@ -17,3 +17,5 @@ http://rll.berkeley.edu/deeprlcourse/
 
 Keras  OpenAI Gym
 riselab   DeepMind Lab 
+
+训练数据 pan.baidu.com/s/1gfMmtgR 密码：vhyg
