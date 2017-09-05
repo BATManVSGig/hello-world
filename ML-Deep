@@ -98,3 +98,16 @@ Deeplearning.ai 课程围绕神经网络、反向传播、卷积网络、循环�
 租房筛选流程：https://yq.aliyun.com/articles/159509
 安全牛 站长招聘 简历发至 tianyue@gooann.com
 TS安装指南： http://blog.csdn.net/tina_ttl/article/details/51762471 
+
+MXNet
+图表达，图分析，内存优化，算子融合（GraphIR）
+异构硬件，任务调度，任务依赖，编译优化 （执行引擎）
+NDArray (numpy数据结构)张量计算
+内存复用
+移动端建立的模型越小越好。 
+PS-lite：轻量级Parameter Server 迭代性，容错性，参数收敛的非均匀性。 并行提速，参数多。
+高效通信：异步通信。弹性扩容：一致性哈希，新server随时插入。容错。易用性：全局共享参数可以表示多种形式。
+
+算子融合，纵向融合（消除）纵向融合（合并） 横向融合
+INT8
+
