@@ -1,0 +1,312 @@
+
+
+█ 如果你有非常大的决心从事深度学习，又不想在这一行打酱油，那么研读大牛论文将是不可避免的一步。而作为新人，你的第一个问题或许是：“论文那么多，从哪一篇读起？”
+
+
+本文将试图解决这个问题——文章标题本来是：“从入门到绝望，无止境的深度学习论文”。请诸位备好道具，开启头悬梁锥刺股的学霸姿势。
+
+开个玩笑。
+
+但对非科班出身的开发者而言，读论文的确可以成为一件很痛苦的事。但好消息来了——为避免初学者陷入迷途苦海，昵称为 songrotek 的学霸在 GitHub 发布了他整理的深度学习路线图，分门别类梳理了新入门者最需要学习的 DL 论文，又按重要程度给每篇论文打上星星。
+
+截至目前，这份 DL 论文路线图已在 GitHub 收获了近万颗星星好评，人气极高。闲话少说，该路线图根据以下四项原则而组织：
+
+
+
+从大纲到细节
+
+从经典到前沿
+
+从一般到具体领域
+
+关注最新研究突破
+
+作者注：有许多论文很新但非常值得一读。
+
+1 深度学习历史和基础
+
+1.0 书籍
+
+█[0] Bengio, Yoshua, Ian J. Goodfellow, and Aaron Courville. "Deep learning." An MIT Press book. (2015). [pdf] (Ian Goodfellow 等大牛所著的教科书，乃深度学习圣经。你可以同时研习这本书以及以下论文) ★★★★★
+
+地址：https://github.com/HFTrader/DeepLearningBook/raw/master/DeepLearningBook.pdf
+
+1.1 调查
+
+█[1] LeCun, Yann, Yoshua Bengio, and Geoffrey Hinton. "Deep learning." Nature 521.7553 (2015): 436-444. [pdf] (三巨头做的调查) ★★★★★
+
+地址：http://www.cs.toronto.edu/~hinton/absps/NatureDeepReview.pdf
+
+1.2 深度置信网络 (DBN，深度学习前夜的里程碑)
+
+█[2] Hinton, Geoffrey E., Simon Osindero, and Yee-Whye Teh. "A fast learning algorithm for deep belief nets." Neural computation 18.7 (2006): 1527-1554. [pdf] (深度学习前夜) ★★★
+
+地址：http://www.cs.toronto.edu/~hinton/absps/ncfast.pdf
+
+█[3] Hinton, Geoffrey E., and Ruslan R. Salakhutdinov. "Reducing the dimensionality of data with neural networks." Science 313.5786 (2006): 504-507. [pdf] (里程碑，展示了深度学习的前景) ★★★
+
+地址：http://www.cs.toronto.edu/~hinton/science.pdf
+
+1.3 ImageNet 的进化（深度学习从此萌发）
+
+█[4] Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. "Imagenet classification with deep convolutional neural networks." Advances in neural information processing systems. 2012. [pdf] (AlexNet, 深度学习突破) ★★★★★
+
+地址：http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+
+█[5] Simonyan, Karen, and Andrew Zisserman. "Very deep convolutional networks for large-scale image recognition." arXiv preprint arXiv:1409.1556 (2014). [pdf] (VGGNet，神经网络变得很深层) ★★★
+
+地址：https://arxiv.org/pdf/1409.1556.pdf
+
+█[6] Szegedy, Christian, et al. "Going deeper with convolutions." Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2015. [pdf] (GoogLeNet) ★★★
+
+地址：http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Szegedy_Going_Deeper_With_2015_CVPR_paper.pdf
+
+█[7] He, Kaiming, et al. "Deep residual learning for image recognition." arXiv preprint arXiv:1512.03385 (2015). [pdf](ResNet，特别深的神经网络, CVPR 最佳论文) ★★★★★
+
+地址：https://arxiv.org/pdf/1512.03385.pdf
+
+1.4 语音识别的进化
+
+█[8] Hinton, Geoffrey, et al. "Deep neural networks for acoustic modeling in speech recognition: The shared views of four research groups." IEEE Signal Processing Magazine 29.6 (2012): 82-97. [pdf] (语音识别的突破) ★★★★
+
+地址：http://cs224d.stanford.edu/papers/maas_paper.pdf
+
+█[9] Graves, Alex, Abdel-rahman Mohamed, and Geoffrey Hinton. "Speech recognition with deep recurrent neural networks." 2013 IEEE international conference on acoustics, speech and signal processing. IEEE, 2013. [pdf] (RNN) ★★★
+
+地址：http://arxiv.org/pdf/1303.5778.pdf
+
+█[10] Graves, Alex, and Navdeep Jaitly. "Towards End-To-End Speech Recognition with Recurrent Neural Networks." ICML. Vol. 14. 2014. [pdf] ★★★
+
+地址：http://www.jmlr.org/proceedings/papers/v32/graves14.pdf
+
+█[11] Sak, Haşim, et al. "Fast and accurate recurrent neural network acoustic models for speech recognition." arXiv preprint arXiv:1507.06947 (2015). [pdf] (谷歌语音识别系统) ★★★
+
+地址：http://arxiv.org/pdf/1507.06947
+
+█[12] Amodei, Dario, et al. "Deep speech 2: End-to-end speech recognition in english and mandarin." arXiv preprint arXiv:1512.02595 (2015). [pdf] (百度语音识别系统) ★★★★
+
+地址：https://arxiv.org/pdf/1512.02595.pdf
+
+█[13] W. Xiong, J. Droppo, X. Huang, F. Seide, M. Seltzer, A. Stolcke, D. Yu, G. Zweig "Achieving Human Parity in Conversational Speech Recognition." arXiv preprint arXiv:1610.05256 (2016). [pdf] (最前沿的语音识别, 微软) ★★★★
+
+地址：https://arxiv.org/pdf/1610.05256v1
+
+研读以上论文之后，你将对深度学习历史、模型的基本架构（包括 CNN, RNN, LSTM）有一个基础的了解，并理解深度学习如何应用于图像和语音识别问题。接下来的论文，将带你深入探索深度学习方法、在不同领域的应用和前沿尖端技术。我建议，你可以根据兴趣和工作/研究方向进行选择性的阅读。
+
+2 深度学习方法
+
+2.1 模型
+
+█[14] Hinton, Geoffrey E., et al. "Improving neural networks by preventing co-adaptation of feature detectors." arXiv preprint arXiv:1207.0580 (2012). [pdf] (Dropout) ★★★
+
+地址：https://arxiv.org/pdf/1207.0580.pdf
+
+█[15] Srivastava, Nitish, et al. "Dropout: a simple way to prevent neural networks from overfitting." Journal of Machine Learning Research 15.1 (2014): 1929-1958. [pdf] ★★★
+
+地址：http://www.jmlr.org/papers/volume15/srivastava14a.old/source/srivastava14a.pdf
+
+█[16] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating deep network training by reducing internal covariate shift." arXiv preprint arXiv:1502.03167 (2015). [pdf] (2015 年的杰出研究) ★★★★
+
+地址：http://arxiv.org/pdf/1502.03167
+
+█[17] Ba, Jimmy Lei, Jamie Ryan Kiros, and Geoffrey E. Hinton. "Layer normalization." arXiv preprint arXiv:1607.06450 (2016). [pdf] (Batch Normalization 的更新) ★★★★
+
+地址：https://arxiv.org/pdf/1607.06450.pdf?utm_source=sciontist.com&utm_medium=refer&utm_campaign=promote
+
+█[18] Courbariaux, Matthieu, et al. "Binarized Neural Networks: Training Neural Networks with Weights and Activations Constrained to+ 1 or−1." [pdf] (新模型，快) ★★★
+
+地址：https://pdfs.semanticscholar.org/f832/b16cb367802609d91d400085eb87d630212a.pdf
+
+█[19] Jaderberg, Max, et al. "Decoupled neural interfaces using synthetic gradients." arXiv preprint arXiv:1608.05343 (2016). [pdf] (训练方法的创新，研究相当不错) ★★★★★
+
+地址：https://arxiv.org/pdf/1608.05343
+
+█[20] Chen, Tianqi, Ian Goodfellow, and Jonathon Shlens. "Net2net: Accelerating learning via knowledge transfer." arXiv preprint arXiv:1511.05641 (2015). [pdf] (改进此前的训练网络，来缩短训练周期) ★★★
+
+地址：Accelerating Learning via Knowledge Transfer
+
+█[21] Wei, Tao, et al. "Network Morphism." arXiv preprint arXiv:1603.01670 (2016). [pdf] (改进此前的训练网络，来缩短训练周期) ★★★
+
+地址：[1603.01670] Network Morphism
+
+2.2 优化 Optimization
+
+█[22] Sutskever, Ilya, et al. "On the importance of initialization and momentum in deep learning." ICML (3) 28 (2013): 1139-1147. [pdf] (Momentum optimizer) ★★
+
+地址：http://www.jmlr.org/proceedings/papers/v28/sutskever13.pdf
+
+█[23] Kingma, Diederik, and Jimmy Ba. "Adam: A method for stochastic optimization." arXiv preprint arXiv:1412.6980 (2014). [pdf] (Maybe used most often currently) ★★★
+
+地址：http://arxiv.org/pdf/1412.6980
+
+█[24] Andrychowicz, Marcin, et al. "Learning to learn by gradient descent by gradient descent." arXiv preprint arXiv:1606.04474 (2016). [pdf] (Neural Optimizer,Amazing Work) ★★★★★
+
+地址：https://arxiv.org/pdf/1606.04474
+
+█[25] Han, Song, Huizi Mao, and William J. Dally. "Deep compression: Compressing deep neural network with pruning, trained quantization and huffman coding." CoRR, abs/1510.00149 2 (2015). [pdf] (ICLR best paper, new direction to make NN running fast,DeePhi Tech Startup) ★★★★★
+
+地址：https://pdfs.semanticscholar.org/5b6c/9dda1d88095fa4aac1507348e498a1f2e863.pdf
+
+█[26] Iandola, Forrest N., et al. "SqueezeNet: AlexNet-level accuracy with 50x fewer parameters and< 1MB model size." arXiv preprint arXiv:1602.07360 (2016). [pdf] (Also a new direction to optimize NN,DeePhi Tech Startup) ★★★★
+
+地址：http://arxiv.org/pdf/1602.07360
+
+2.3 无监督学习/深度生成模型
+
+█[27] Le, Quoc V. "Building high-level features using large scale unsupervised learning." 2013 IEEE international conference on acoustics, speech and signal processing. IEEE, 2013. [pdf] (里程碑, 吴恩达, 谷歌大脑, Cat) ★★★★
+
+地址：http://arxiv.org/pdf/1112.6209.pdf&embed
+
+█[28] Kingma, Diederik P., and Max Welling. "Auto-encoding variational bayes." arXiv preprint arXiv:1312.6114 (2013). [pdf](VAE) ★★★★
+
+地址：http://arxiv.org/pdf/1312.6114
+
+█[29] Goodfellow, Ian, et al. "Generative adversarial nets." Advances in Neural Information Processing Systems. 2014. [pdf](GAN，很酷的想法) ★★★★★
+
+地址：http://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf
+
+█[30] Radford, Alec, Luke Metz, and Soumith Chintala. "Unsupervised representation learning with deep convolutional generative adversarial networks." arXiv preprint arXiv:1511.06434 (2015). [pdf] (DCGAN) ★★★★
+
+地址：http://arxiv.org/pdf/1511.06434
+
+█[31] Gregor, Karol, et al. "DRAW: A recurrent neural network for image generation." arXiv preprint arXiv:1502.04623 (2015). [pdf] (VAE with attention, 很出色的研究) ★★★★★
+
+地址：http://jmlr.org/proceedings/papers/v37/gregor15.pdf
+
+█[32] Oord, Aaron van den, Nal Kalchbrenner, and Koray Kavukcuoglu. "Pixel recurrent neural networks." arXiv preprint arXiv:1601.06759 (2016). [pdf] (PixelRNN) ★★★★
+
+地址：http://arxiv.org/pdf/1601.06759
+
+█[33] Oord, Aaron van den, et al. "Conditional image generation with PixelCNN decoders." arXiv preprint arXiv:1606.05328 (2016). [pdf] (PixelCNN) ★★★★
+
+地址：https://arxiv.org/pdf/1606.05328
+
+2.4 递归神经网络（RNN） / Sequence-to-Sequence Model
+
+█[34] Graves, Alex. "Generating sequences with recurrent neural networks." arXiv preprint arXiv:1308.0850 (2013). [pdf] (LSTM, 效果很好，展示了 RNN 的性能) ★★★★
+
+地址：http://arxiv.org/pdf/1308.0850
+
+█[35] Cho, Kyunghyun, et al. "Learning phrase representations using RNN encoder-decoder for statistical machine translation." arXiv preprint arXiv:1406.1078 (2014). [pdf] (第一篇 Sequence-to-Sequence 的论文) ★★★★
+
+地址：http://arxiv.org/pdf/1406.1078
+
+█[36] Sutskever, Ilya, Oriol Vinyals, and Quoc V. Le. "Sequence to sequence learning with neural networks." Advances in neural information processing systems. 2014. [pdf] (杰出研究) ★★★★★
+
+地址：http://papers.nips.cc/paper/5346-information-based-learning-by-agents-in-unbounded-state-spaces.pdf
+
+█[37] Bahdanau, Dzmitry, KyungHyun Cho, and Yoshua Bengio. "Neural Machine Translation by Jointly Learning to Align and Translate." arXiv preprint arXiv:1409.0473 (2014). [pdf] ★★★★
+
+地址：https://arxiv.org/pdf/1409.0473v7.pdf
+
+█[38] Vinyals, Oriol, and Quoc Le. "A neural conversational model." arXiv preprint arXiv:1506.05869 (2015). [pdf] (Seq-to-Seq 聊天机器人) ★★★
+
+地址：http://arxiv.org/pdf/1506.05869.pdf%20(http://arxiv.org/pdf/1506.05869.pdf)
+
+2.5 神经网络图灵机
+
+█[39] Graves, Alex, Greg Wayne, and Ivo Danihelka. "Neural turing machines." arXiv preprint arXiv:1410.5401 (2014). [pdf] (未来计算机的基础原型机) ★★★★★
+
+地址：http://arxiv.org/pdf/1410.5401.pdf
+
+█[40] Zaremba, Wojciech, and Ilya Sutskever. "Reinforcement learning neural Turing machines." arXiv preprint arXiv:1505.00521 362 (2015). [pdf] ★★★
+
+地址：https://pdfs.semanticscholar.org/f10e/071292d593fef939e6ef4a59baf0bb3a6c2b.pdf
+
+█[41] Weston, Jason, Sumit Chopra, and Antoine Bordes. "Memory networks." arXiv preprint arXiv:1410.3916 (2014). [pdf] ★★★
+
+地址：http://arxiv.org/pdf/1410.3916
+
+█[42] Sukhbaatar, Sainbayar, Jason Weston, and Rob Fergus. "End-to-end memory networks." Advances in neural information processing systems. 2015. [pdf] ★★★★
+
+地址：http://papers.nips.cc/paper/5846-end-to-end-memory-networks.pdf
+
+█[43] Vinyals, Oriol, Meire Fortunato, and Navdeep Jaitly. "Pointer networks." Advances in Neural Information Processing Systems. 2015. [pdf] ★★★★
+
+地址：http://papers.nips.cc/paper/5866-pointer-networks.pdf
+
+█[44] Graves, Alex, et al. "Hybrid computing using a neural network with dynamic external memory." Nature (2016). [pdf] (里程碑，把以上论文的想法整合了起来) ★★★★★
+
+地址：https://www.dropbox.com/s/0a40xi702grx3dq/2016-graves.pdf
+
+2.6 深度强化学习
+
+█[45] Mnih, Volodymyr, et al. "Playing atari with deep reinforcement learning." arXiv preprint arXiv:1312.5602 (2013). [pdf]) (第一个以深度强化学习为题的论文) ★★★★
+
+地址：http://arxiv.org/pdf/1312.5602.pdf
+
+█[46] Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." Nature 518.7540 (2015): 529-533. [pdf] (里程碑) ★★★★★
+
+地址：https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
+
+█[47] Wang, Ziyu, Nando de Freitas, and Marc Lanctot. "Dueling network architectures for deep reinforcement learning." arXiv preprint arXiv:1511.06581 (2015). [pdf] (ICLR 最佳论文，很棒的想法) ★★★★
+
+地址：http://arxiv.org/pdf/1511.06581
+
+█[48] Mnih, Volodymyr, et al. "Asynchronous methods for deep reinforcement learning." arXiv preprint arXiv:1602.01783 (2016). [pdf] (前沿方法) ★★★★★
+
+地址：http://arxiv.org/pdf/1602.01783
+
+█[49] Lillicrap, Timothy P., et al. "Continuous control with deep reinforcement learning." arXiv preprint arXiv:1509.02971 (2015). [pdf] (DDPG) ★★★★
+
+地址：http://arxiv.org/pdf/1509.02971
+
+█[50] Gu, Shixiang, et al. "Continuous Deep Q-Learning with Model-based Acceleration." arXiv preprint arXiv:1603.00748 (2016). [pdf] (NAF) ★★★★
+
+地址：http://arxiv.org/pdf/1603.00748
+
+█[51] Schulman, John, et al. "Trust region policy optimization." CoRR, abs/1502.05477 (2015). [pdf] (TRPO) ★★★★
+
+地址：http://www.jmlr.org/proceedings/papers/v37/schulman15.pdf
+
+█[52] Silver, David, et al. "Mastering the game of Go with deep neural networks and tree search." Nature 529.7587 (2016): 484-489. [pdf] (AlphaGo) ★★★★★
+
+地址：http://willamette.edu/~levenick/cs448/goNature.pdf
+
+2.7 深度迁移学习 /终生学习 / 强化学习
+
+█[53] Bengio, Yoshua. "Deep Learning of Representations for Unsupervised and Transfer Learning." ICML Unsupervised and Transfer Learning 27 (2012): 17-36. [pdf] (这是一个教程) ★★★
+
+地址：http://www.jmlr.org/proceedings/papers/v27/bengio12a/bengio12a.pdf
+
+█[54] Silver, Daniel L., Qiang Yang, and Lianghao Li. "Lifelong Machine Learning Systems: Beyond Learning Algorithms." AAAI Spring Symposium: Lifelong Machine Learning. 2013. [pdf] (对终生学习的简单讨论) ★★★
+
+地址：http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.696.7800&rep=rep1&type=pdf
+
+█[55] Hinton, Geoffrey, Oriol Vinyals, and Jeff Dean. "Distilling the knowledge in a neural network." arXiv preprint arXiv:1503.02531 (2015). [pdf] (大神们的研究) ★★★★
+
+地址：http://arxiv.org/pdf/1503.02531
+
+█[56] Rusu, Andrei A., et al. "Policy distillation." arXiv preprint arXiv:1511.06295 (2015). [pdf] (RL 领域) ★★★
+
+地址：http://arxiv.org/pdf/1511.06295
+
+█[57] Parisotto, Emilio, Jimmy Lei Ba, and Ruslan Salakhu★★★tdinov. "Actor-mimic: Deep multitask and transfer reinforcement learning." arXiv preprint arXiv:1511.06342 (2015). [pdf] (RL 领域) ★★★
+
+地址：http://arxiv.org/pdf/1511.06342
+
+█[58] Rusu, Andrei A., et al. "Progressive neural networks." arXiv preprint arXiv:1606.04671 (2016). [pdf] (杰出研究, 很新奇的想法) ★★★★★
+
+地址：https://arxiv.org/pdf/1606.04671
+
+2.8 One Shot 深度学习
+
+█[59] Lake, Brenden M., Ruslan Salakhutdinov, and Joshua B. Tenenbaum. "Human-level concept learning through probabilistic program induction." Science 350.6266 (2015): 1332-1338. [pdf] (不含深度学习但值得一读) ★★★★★
+
+地址：http://clm.utexas.edu/compjclub/wp-content/uploads/2016/02/lake2015.pdf
+
+█[60] Koch, Gregory, Richard Zemel, and Ruslan Salakhutdinov. "Siamese Neural Networks for One-shot Image Recognition."(2015) [pdf] ★★★
+
+地址：http://www.cs.utoronto.ca/~gkoch/files/msc-thesis.pdf
+
+█[61] Santoro, Adam, et al. "One-shot Learning with Memory-Augmented Neural Networks." arXiv preprint arXiv:1605.06065 (2016). [pdf] (one shot 学习的基础一步) ★★★★
+
+地址：http://arxiv.org/pdf/1605.06065
+
+█[62] Vinyals, Oriol, et al. "Matching Networks for One Shot Learning." arXiv preprint arXiv:1606.04080 (2016). [pdf] ★★★
+
+地址：https://arxiv.org/pdf/1606.04080
+
+█[63] Hariharan, Bharath, and Ross Girshick. "Low-shot visual object recognition." arXiv preprint arXiv:1606.02819 (2016). [pdf] (通向更大规模数据的一步) ★★★★
+
+地址：http://arxiv.org/pdf/1606.02819
