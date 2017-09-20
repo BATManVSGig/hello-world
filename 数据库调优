@@ -1,3 +1,10 @@
+CPU过载–- 慢查询，OPTIMZE TABLE
+内存使用问题–- 内存相关参数配置不合理
+磁盘I/O -- Buffer pool命中率；慢查询；redo, undo, data分开存放
+网络问题– 非专有网络，网络路由
+表及查询语句问题
+
+
 由 wm_conca t引发了性能问题
 
 显然，从 SQL 功能上，wm_concat 是必须的，我也尝试过用 listagg 来替代 wm_concat，但是会因超过 4000 字符而报错。
