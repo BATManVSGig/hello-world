@@ -1,3 +1,7 @@
+Kinetica gpu 关系数据库服务提供商 与美国机构关系紧密
+服务器浮动IP
+单点写入，负债均衡，
+
 CPU过载–- 慢查询，OPTIMZE TABLE
 内存使用问题–- 内存相关参数配置不合理
 磁盘I/O -- Buffer pool命中率；慢查询；redo, undo, data分开存放
