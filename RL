@@ -8,7 +8,9 @@
 强化学习解决决策问题
 强化学习是一个通过交互产生智能的形式，淡化了原有的训练数据，测试数据的概念。强调了Agent，Environment，Action，Feedback
 
-
+常用的10大机器学习算法有：决策树、随机森林、逻辑回归、SVM、朴素贝叶斯、K最近邻算法、K均值算法、Adaboost算法、神经网络、马尔科夫。
+Apache有个开源项叫mahout，提供了这些经典算法的实现；
+但是后来spark出来了，由于在内存迭代计算方面的优势，一下子抢过了这个风头，目前spark自带的MLlib被使用得更为广泛
  Mobileye：强化学习是Mobieye驾驶策略决策的主要方法
 强化学习：
 http://www0.cs.ucl.ac.uk/staff/d.silver/web/Teaching.html
