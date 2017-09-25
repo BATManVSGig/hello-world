@@ -111,6 +111,80 @@ PS-lite：轻量级Parameter Server 迭代性，容错性，参数收敛的非�
 算子融合，纵向融合（消除）纵向融合（合并） 横向融合
 INT8
 
+可视化演示程序由San Fransisco的David Galles开发，并在如下网站发布：http://www.cs.usfca.edu/~galles/visualization/Algorithms.html
+ 
+对于数据结构初学者而言，这是最好的学习材料。
+ 
+关于可视化演示程序： 
+The best way to understand complex data structures is to see them in action. We've developed interactive animations for a variety of data structures and algorithms. Our visualization tool is written in javascript using the HTML5 canvas element, and run in just about any modern browser -- including iOS devices like the iPhone and iPad, and even the web browser in the Kindle! (The frame rate is low enough in the Kindle that the visualizations aren't terribly useful, but the tree-based visualizations -- BSTs and AVL Trees -- seem to work well enough)
+ 
+当前该网站提供了如下数据结构&算法运行演示过程：
+ Basics
+Stack: Array Implementation
+Stack: Linked List Implementation
+Queues: Array Implementation
+Queues: Linked List Implementation
+Lists: Array Implementation (available in java version)
+Lists: Linked List Implementation (available in java version)
+Recursion
+Factorial
+Reversing a String
+N-Queens Problem
+Indexing
+Binary Search Trees
+AVL Trees (Balanced binary search trees)
+Red-Black Trees
+Splay Trees
+Open Hash Tables (Closed Addressing)
+Closed Hash Tables (Open Addressing)
+Closed Hash Tables, using buckets
+B Trees
+B+ Trees
+Sorting
+Comparison Sorting
+Bubble Sort
+Selection Sort
+Insertion Sort
+Shell Sort
+Merge Sort
+Quck Sort
+Bucket Sort
+Counting Sort
+Radix Sort
+Heap Sort
+Heap-like Data Structures
+Heaps
+Binomial Queues
+Fibonacci Heaps
+Leftist Heaps
+Skew Heaps
+Graph Algorithms
+Breadth-First Search
+Depth-First Search
+Connected Components
+Dijkstra's Shortest Path
+Prim's Minimum Cost Spanning Tree
+Topological Sort (Using Indegree array)
+Topological Sort (Using DFS)
+Floyd-Warshall (all pairs shortest paths)
+Kruskal Minimum Cost Spanning Tree Algorithm
+Dynamic Programming
+Calculating nth Fibonacci number
+Making Change
+Longest Common Subsequence
+Geometric Algorithms
+B-Trees -->
+2D Rotation and Scale Matrices
+2D Rotation and Translation Matrices
+2D Changing Coordinate Systems
+3D Rotation and Scale Matrices
+3D Changing Coordinate Systems
+Others ...
+B-Trees -->
+Disjoint Sets
+Huffman Coding (available in java version)
+
+
 ADAS real-time test demo
 系统功能简述
 此ADAS DEMO 展示了对于高级辅助驾驶系统（ADAS）中车道保持系统（LKAS）、紧急制动系统
