@@ -1,3 +1,8 @@
+HGX-based servers
+HGX-based servers with Volta to their global customer base.
+HGX is an 8-GPU chassis with the NVLink interconnect.
+used to provide high levels of GPU scaling in a dense package.
+
 sp，sm，thread，block，grid，warp
 
 SP（streaming Process），SM（streaming multiprocessor）是硬件（GPU hardware）概念。而thread，block，grid，warp是软件上的（CUDA）概念。
