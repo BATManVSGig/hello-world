@@ -1,3 +1,4 @@
+人脸识别： https://github.com/steponteam/FaceRecognization
 Lua转换XML文件库： http://download.csdn.net/download/zyj871010/6034733?locationNum=1&fps=1 
 
 # hello-world
