@@ -1,0 +1,145 @@
+svn安装只看相信懂了也从网上搜下yum使用来安装svn也好方法仔细看下吧#都命令了所有安装步骤了祝成功 
+centos5.3
+sqlite-amalgamation-3.6.17.tar.gz
+apr-1.3.8.tar.gzapr-util-1.3.9.tar.gz
+subversion-1.6.5.tar.bz2
+
+#  tar zxvf sqlite-amalgamation-3.6.17.tar.gz
+#  cd sqlite-3.6.17/
+#  ./configure --prefix=/usr/
+#  make
+#  make install
+
+#  tar -zvxf apr-1.4.6.tar.gz
+#  cd apr-1.4.6
+#  ./configure
+#  make
+#  make install
+
+#  cd ..
+#  tar -zvxf apr-util-1.5.2.tar.gz
+#  cd apr-util-1.5.2
+#  ./configure --with-apr=/usr/local/apr
+#  make
+#  make install
+
+#  tar -zvxf zlib-1.2.8.tar.gz
+#  cd zlib-1.2.8
+#  ./config
+#  make
+#  make install
+
+#  tar -zxf openssl-1.0.1g.tar.gz
+#  cd openssl-1.0.1g
+#  ./config shared zlib
+#  make
+#  make install
+
+//安装scons-2.3.1, 具体安装命令不记得了，README.txt中的其中一条安装命令
+#  unzip scons-2.3.1.zip
+#  cd scons-2.3.1
+#  python setup.py install --standard-lib
+
+//用scons安装serf-1.3.3
+#  tar -jxvf serf-1.3.3.tar.bz2
+#  cd serf-1.3.3
+#  #./configure PREFIX=/usr/local/serf --with-openssl=/usr/local/ssl
+#  scons PREFIX=/usr/local/serf APR=/usr/local/apr APU=/usr/local/apr OPENSSL=/usr/local/ssl
+#  scons install
+
+//安装sqlite-amalgamation-3071501，svn-1.8.9需要sqlite-amalgamation-3071501，
+//sqlite-amalgamation-3071501不需要安装，只需要将压缩包解压到svn安装目录的sqlite-amalgamation中
+#  unzip sqlite-amalgamation-3071501.zip
+#  mv sqlite-amalgamation-3071501.zip subversion-1.8.9/sqlite-amalgamation
+
+
+#  tar jxvf subversion-1.8.9.tar.bz2
+#  cd subversion-1.8.9
+#   ./configure --prefix=/usr/local/svn --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr --with-serf=/usr/local/serf 
+#  make
+#  make install
+
+#  /usr/local/svn/bin/svnserve --version
+
+
+备注 sqlite-amalgamation-3071501拷贝到svn安装文件夹中。
+unzip qlite-amalgamation-3071501.zip
+
+
+前段时间在vps上安装了subversion.1.8.5,在checkout http地址的时候报了个错误 svn: E170000: Unrecognized URL scheme for httpxxxx
+
+检查了下发现当初安装svn的时候默认是不支持http地址的（没有加–with-serf的缘故）
+
+这个可以使用命令查看
+
+[root@cloud ~]# svn --version
+
+svn，版本 1.8.5 (r1542147)
+ 编译于 Dec 17 2013，14:06:24 在 x86_64-unknown-linux-gnu
+
+版权所有 (C) 2013 Apache 软件基金会。
+此软件包含了许多人的贡献，请查看文件 NOTICE 以获得更多信息。
+Subversion 是开放源代码软件，请参阅 http://subversion.apache.org/ 站点。
+可使用以下的版本库访问模块:
+
+* ra_svn : 使用 svn 网络协议访问版本库的模块。
+ - 处理“svn”方案
+* ra_local : 访问本地磁盘的版本库模块。
+ - 处理“file”方案
+
+意思是访问版本库支持本地或者svn网络协议访问
+
+查看了相关资料，从Subversion-1.8开始需要使用serf软件包支持 访问http协议的版本库。
+
+于是就下载了serf-1.3.3.tar.bz2、scons两个软件包。（低版本
+
+下载scons rpm
+[root@cloud software]# wget http://downloads.sourceforge.net/project/scons/scons/2.3.0/scons-2.3.0-1.noarch.rpm?r=http%3A%2F%2Fwww.scons.org%2F&ts=1387258358&use_mirror=softlayer-ams
+
+#rpm安装
+[root@cloud software]# rpm -ivh scons-2.3.0-1.noarch.rpm
+
+#serf
+[root@cloud software]# wget https://serf.googlecode.com/files/serf-1.3.3.tar.bz2
+[root@cloud software]# tar -jxvf serf-1.3.3.tar.bz2
+[root@cloud software]# cd serf-1.3.3
+
+#scons --help可以参看scons用法，以下配置命令根据环境灵活设置
+[root@cloud serf-1.3.3]# scons PREFIX=/usr/local/serf APR=/usr/local/apr APU=/usr/local/apr-util OPENSSL=/usr/bin
+#安装serf
+[root@cloud serf-1.3.3]# scons install
+[root@cloud serf-1.3.3]# cd ../subversion-1.8.5
+
+#重新编译安装svn
+#增加 --with-openssl --with-serf=/usr/local/serf
+[root@cloud subversion-1.8.5]# ./configure --prefix=/usr/local/subversion/ --with-apxs=/usr/local/apache/bin/apxs  --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr-util/ --enable-mod-activation --with-openssl --with-serf=/usr/local/serf
+[root@cloud subversion-1.8.5]# make && make install
+[root@cloud subversion-1.8.5]# cp /www/software/serf-1.3.3/libserf-1.so.1 /usr/local/subversion/lib #error while loading shared libraries: libexpat.so.0
+
+#查看svn版本
+[root@cloud subversion-1.8.5]# svn --version
+svn，版本 1.8.5 (r1542147)
+   编译于 Dec 17 2013，14:06:24 在 x86_64-unknown-linux-gnu
+
+版权所有 (C) 2013 Apache 软件基金会。
+此软件包含了许多人的贡献，请查看文件 NOTICE 以获得更多信息。
+Subversion 是开放源代码软件，请参阅 http://subversion.apache.org/ 站点。
+
+
+可使用以下的版本库访问模块: 
+
+* ra_svn : 使用 svn 网络协议访问版本库的模块。
+  - 处理“svn”方案
+* ra_local : 访问本地磁盘的版本库模块。
+  - 处理“file”方案
+* ra_serf : Module for accessing a repository via WebDAV protocol using serf.
+  - using serf 1.3.3
+  - 处理“http”方案
+  - 处理“https”方
+
+可以看到重新编译安装后的svn支持http、https
+
+注意，最初安装完成后，使用svn命令，结果报了个错误：error while loading shared libraries: libexpat.so.0
+我尝试着直接复制serf解压目录下的libserf-1.so.1 到svn安装目录
+
+参考文档http://serf.googlecode.com/svn/trunk/README
