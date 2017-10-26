@@ -1,0 +1,587 @@
+
+C&C++内存相关问题定位方法总结
+日期：2017-10-26 08:54浏览：365评论：3
+前言
+前几年一直在从事C++的开发，中间遇到了各种内存的问题，比如内存泄露，内存越界，内存空洞等等，把中间的方法和思想都总结一下，希望可以给大家定位C/C++的内存问题提供一些思路。
+
+本文先介绍了glibc的ptmalloc原理，然后介绍了常用的内存定位API，命令和工具，最后具体介绍一下如何定位内存泄露，越界和空洞等问题。 如果大家有什么好的方法，也欢迎一起交流。
+
+linux 32和64位进程虚拟内存示意图
+在Linux 2.6.7以后32位机器上进程的内存模型如下：
+image.png
+对于32位机器，我们的进程被loader装载到内存时，其虚拟内存布局如上图所示。首先被载入的是.text段（放程序代码的），然后是.data段（存放在编译阶段就能确定的数据，也就是通常所说的静态存储区，赋了初值的全局变量、静态变量以及常量放在这个区域），最后是.bss段（定义而没有赋初值的全局变量和静态变量放在这个区域）。程序能访问的最后地址是0xbfffffff，也就是3G地址处，3G以上的1G空间是内核使用的，应用程序不可以直接访问。应用程序的stack（存放局部变量等，linux下，堆栈大小可以通过unlimit –a查询）从最高地址开始向下扩展。在.bss段和stack之间分为了两个部分：MAP和HEAP，程序中通过malloc和free对内存的操作就是在这一部分。
+
+64位进程虚拟内存布局：
+image.png
+
+glibc的ptmalloc原理(对于本章节不感兴趣的可以跳过)
+在介绍内存问题之前，要先了解一下ptmalloc的原理，了解底层是如何管理内存的。
+三层管理机制：
+image.png
+
+Main_arena与non_main_arena
+
+在内存分配器中只有一个主分配区，每次分配内存都会对主分配去加锁。为了支持多线程，增加非主分配区的支持。
+主分配区可以访问进程的heap区域和mmap映射区域，而非主分配区只能访问mmap映射区域。当某一线程需要调用malloc()分配内存空间时，该线程先查看线程私有变量中是否已经存在一个分配区，如果存在，尝试对该分配区加锁，如果加锁成功，使用该分配区分配内存，如果失败，该线程搜索循环链表试图获得一个没有加锁的分配区。如果所有的分配区都已经加锁，那么malloc()会开辟一个新的分配区，把该分配区加入到全局分配区循环链表并加锁，然后使用该分配区进行分配内存操作。在释放操作中，线程同样试图获得待释放内存块所在分配区的锁，如果该分配区正在被别的线程使用，则需要等待直到其他线程释放该分配区的互斥锁之后才可以进行释放操作。
+
+Glibc中分配区的实现
+
+每个分配区是 struct malloc_state 的一个实例， ptmalloc 使用 malloc_state 来管理分配。
+stuct  malloc_state 的定义如下：
+struct malloc_state {
+  /* Serialize access.  */
+  mutex_t mutex;
+
+  /* Flags (formerly in max_fast).  */
+  int flags;
+
+#if THREAD_STATS
+  /* Statistics for locking.  Only used if THREAD_STATS is defined.  */
+  long stat_lock_direct, stat_lock_loop, stat_lock_wait;
+#endif
+
+  /* Fastbins */
+  mfastbinptr      fastbinsY[NFASTBINS];
+
+  /* Base of the topmost chunk -- not otherwise kept in a bin */
+  mchunkptr        top;
+
+  /* The remainder from the most recent split of a small request */
+  mchunkptr        last_remainder;
+
+  /* Normal bins packed as described above */
+  mchunkptr        bins[NBINS * 2 - 2];
+
+  /* Bitmap of bins */
+  unsigned int     binmap[BINMAPSIZE];
+
+  /* Linked list */
+  struct malloc_state *next;
+#ifdef PER_THREAD
+  /* Linked list for free arenas.  */
+  struct malloc_state *next_free;
+#endif
+
+
+  /* Memory allocated from the system in this arena.  */
+  INTERNAL_SIZE_T system_mem;
+  INTERNAL_SIZE_T max_system_mem;
+};
+Mutex 用于串行化访问分配区，当有多个线程访问同一个分配区时，第一个获得这个 mutex 的线程将使用该分配区分配内存，分配完成后，释放该分配区的 mutex ，以便其它线程使用该分配区。
+Flags 记录了分配区的一些标志， bit0 用于标识分配区是否包含至少一个 fast bin chunk ， bit1 用于标识分配区是否能返回连续的虚拟地址空间。
+fastbinsY 拥有 10 （ NFASTBINS ）个元素的数组，用于存放每个 fast chunk 链表头指针，所以 fast bins 最多包含 10 个 fast chunk 的单向链表。
+top 是一个 chunk 指针，指向分配区的 top chunk 。
+last_remainder 是一个 chunk 指针，分配区上次分配 small chunk 时，从一个 chunk 中分裂出一个 small chunk返回给用户，分裂后的剩余部分形成一个 chunk ， last_remainder 就是指向的这个 chunk 。
+bins 用于存储 unstored bin ， small bins 和 large bins 的 chunk 链表头， small bins 一共 62 个， large bins 一共 63 个，加起来一共 125 个 bin 。而 NBINS 定义为 128 ，其实 bin[0] 和 bin[127] 都不存在， bin[1] 为 unsorted bin 的 chunk 链表头，所以实际只有 126bins 。 Bins 数组能存放了 254 （ NBINS * 2 – 2 ）个 mchunkptr 指针，而我们实现需要存储 chunk 的实例，一般情况下， chunk 实例的大小为 6 个 mchunkptr 大小，这 254 个指针的大小怎么能存下 126 个 chunk 呢？这里使用了一个技巧，如果按照我们的常规想法，也许会申请 126 个 malloc_chunk 结构体指针元素的数组，然后再给链表申请一个头节点（即 126 个），再让每个指针元素正确指向而形成 126 个具有头节点的链表。事实上，对于 malloc_chunk 类型的链表“头节点”，其内的 prev_size 和 size 字段是没有任何实际作用的，fd_nextsize 和 bk_nextsize 字段只有 large bins 中的空闲 chunk 才会用到，而对于 large bins 的空闲 chunk 链表头不需要这两个字段，因此这四个字段所占空间如果不合理使用的话那就是白白的浪费。我们再来看一看 128 个malloc_chunk 结构体指针元素的数组占了多少内存空间呢？假设 SIZE_SZ 的大小为 8B ，则指针的大小也为 8B ，结果为 12628=2016 字节。而 126 个 malloc_chunk 类型的链表“头节点”需要多少内存呢？ 12668=6048 ，真的是 6048B 么？不是，刚才不是说了， prev_size ， size ， fd_nextsize 和 bk_nextsize 这四个字段是没有任何实际作用的，因此完全可以被重用（覆盖），因此实际需要内存为 12628=2016 。 Bins 指针数组的大小为，（ 1282-2） 8=2032,2032 大于 2016 （事实上最后 16 个字节都被浪费掉了），那么这 254 个 malloc_chunk 结构体指针元素数组所占内存空间就可以存储这 126 个头节点了。
+binmap 字段是一个 int 数组， ptmalloc 用一个 bit 来标识该 bit 对应的 bin 中是否包含空闲 chunk 。 binmap一共 128bit ， 16 字节， 4 个 int 大小， binmap 按 int 分成 4 个 block ，每个 block 有 32 个 bit ，根据 bin indx 可以使用宏 idx2block 计算出该 bin 在 binmap 对应的 bit 属于哪个 block 。 idx2bit 宏取第 i 位为 1 ，其它位都为 0 的掩码，举个例子： idx2bit(3) 为 “ 0000 1000 ”（只显示 8 位）。 mark_bin 设置第 i 个 bin 在 binmap中对应的 bit 位为 1 ； unmark_bin 设置第 i 个 bin 在 binmap 中对应的 bit 位为 0 ； get_binmap 获取第 i 个 bin 在binmap 中对应的 bit 。
+next 字段用于将分配区以单向链表链接起来。
+next_free 字段空闲的分配区链接在单向链表中，只有在定义了 PER_THREAD 的情况下才定义该字段。
+system_mem 字段记录了当前分配区已经分配的内存大小。
+max_system_mem 记录了当前分配区最大能分配的内存大小。
+Chunck的简介
+
+image.png
+
+特殊的chunck
+
+Top Chunk
+为内存是按地址从低向高进行分配的，在空闲内存的最高处，必然存在着一块空闲chunk，叫做top chunk。
+
+主分配区是唯一能够映射进程heap区域的分配区，它可以通过sbrk()来增大或是收缩进程heap的大小，ptmalloc在开始时会预先分配一块较大的空闲内存（也就是所谓的 heap），主分配区的top chunk在第一次调用malloc时会分配一块(chunk_size + 128KB) align 4KB大小的空间作为初始的heap，用户从top chunk分配内存时，可以直接取出一块内存给用户。在回收内存时，回收的内存恰好与top chunk相邻则合并成新的top chunk，当该次回收的空闲内存大小达到某个阈值，并且top chunk的大小也超过了收缩阈值，会执行内存收缩，减小top chunk的大小，但至少要保留一个页大小的空闲内存，从而把内存归还给操作系统。如果向主分配区的top chunk申请内存，而top chunk中没有空闲内存，ptmalloc会调用sbrk()将的进程heap的边界brk上移，然后修改top chunk的大小。
+
+非主分配区会预先从mmap区域分配一块较大的空闲内存模拟sub-heap，通过管理sub-heap来响应用户的需求。当bins和fast bins都不能满足分配需要的时候，ptmalloc会设法在top chunk中分出一块内存给用户，如果top chunk本身不够大，分配程序会重新分配一个sub-heap，并将top chunk迁移到新的sub-heap上，新的sub-heap与已有的sub-heap用单向链表连接起来，然后在新的top chunk上分配所需的内存以满足分配的需要，实际上，top chunk在分配时总是在fast bins和bins之后被考虑，所以，不论top chunk有多大，它都不会被放到fast bins或者是bins中。Top chunk的大小是随着分配和回收不停变换的，如果从top chunk分配内存会导致top chunk减小，如果回收的chunk恰好与top chunk相邻，那么这两个chunk就会合并成新的top chunk，从而使top chunk变大。如果在free时回收的内存大于某个阈值，并且top chunk的大小也超过了收缩阈值，ptmalloc会收缩sub-heap，如果top-chunk包含了整个sub-heap，ptmalloc会调用munmap把整个sub-heap的内存返回给操作系统。
+
+mmaped chunk
+当需要分配的chunk足够大，而且fast bins和bins都不能满足要求，甚至top chunk本身也不能满足分配需求时，ptmalloc会使用mmap来直接使用内存映射来将页映射到进程空间。这样分配的chunk在被free时将直接解除映射，于是就将内存归还给了操作系统，再次对这样的内存区的引用将导致segmentation fault错误。这样的chunk也不会包含在任何bin中。
+
+last remainder
+Last remainder是另外一种特殊的chunk，就像top chunk和mmaped chunk一样，不会在任何bins中找到这种chunk。当需要分配一个small chunk，但在small bins中找不到合适的chunk，如果last remainder chunk的大小大于所需的small chunk大小，last remainder chunk被分裂成两个chunk，其中一个chunk返回给用户，另一个chunk变成新的last remainder chuk。
+
+bins的简介
+
+相似大小的chunk用双向链表链接起来，这样的一个链表被称为一个bin，glibc一共有128个bin，并使用一个数组来存储这些bin（如下图所示）。
+image.png
+
+Fast bins: 不大于max_fast （默认值为64B）的chunk被释放后，首先会被放到fast bins 中，
+Unsorted Bin : unsorted bin的队列使用bins数组的第一个，如果被用户释放的chunk大于max_fast，或者fast bins中的空闲chunk合并后，这些chunk首先会被放到unsorted bin队列中，在进行malloc操作的时候，如果在fast bins中没有找到合适的chunk，则ptmalloc会先在unsorted bin中查找合适的空闲chunk，然后才查找bins。如果unsorted bin不能满足分配要求。malloc便会将unsorted bin中的chunk加入bins中。然后再从bins中继续进行查找和分配过程
+glibc内存分配过程
+
+小于等于64字节：用pool算法分配。
+64到512字节之间：在最佳匹配算法分配和pool算法分配中取一种合适的。
+大于等于512字节：用最佳匹配算法分配。
+大于等于mmap分配阈值（默认值128KB）：根据设置的mmap的分配策略进行分配，如果没有开启mmap分配阈值的动态调整机制，大于等于128KB就直接调用mmap分配。否则，大于等于mmap分配阈值时才直接调用mmap()分配。
+分配过程：
+image.png
+1) 获取分配区的锁，为了防止多个线程同时访问同一个分配区，在进行分配之前需要取得分配区域的锁。线程先查看线程私有实例中是否已经存在一个分配区，如果存在尝试对该分配区加锁，如果加锁成功，使用该分配区分配内存，否则，该线程搜索分配区循环链表试图获得一个空闲（没有加锁）的分配区。如果所有的分配区都已经加锁，那么ptmalloc会开辟一个新的分配区，把该分配区加入到全局分配区循环链表和线程的私有实例中并加锁，然后使用该分配区进行分配操作。开辟出来的新分配区一定为非主分配区，因为主分配区是从父进程那里继承来的。开辟非主分配区时会调用mmap()创建一个sub-heap，并设置好top chunk。
+
+2) 将用户的请求大小转换为实际需要分配的chunk空间大小。
+
+3) 判断所需分配chunk的大小是否满足chunk_size <= max_fast (max_fast 默认为 64B)，如果是的话，则转下一步，否则跳到第5步。
+
+4) 首先尝试在fast bins中取一个所需大小的chunk分配给用户。如果可以找到，则分配结束。否则转到下一步。
+
+5) 判断所需大小是否处在small bins中，即判断chunk_size < 512B是否成立。如果chunk大小处在small bins中，则转下一步，否则转到第6步。
+
+6) 根据所需分配的chunk的大小，找到具体所在的某个small bin，从该bin的尾部摘取一个恰好满足大小的chunk。若成功，则分配结束，否则，转到下一步。
+
+7) 到了这一步，说明需要分配的是一块大的内存，或者small bins中找不到合适的 chunk。于是，ptmalloc首先会遍历fast bins中的chunk，将相邻的chunk进行合并，并链接到unsorted bin中，然后遍历unsorted bin中的chunk，如果unsorted bin只有一个chunk，并且这个chunk在上次分配时被使用过，并且所需分配的chunk大小属于small bins，并且chunk的大小大于等于需要分配的大小，这种情况下就直接将该chunk进行切割，分配结束，否则将根据chunk的空间大小将其放入small bins或是large bins中，遍历完成后，转入下一步。
+
+8) 到了这一步，说明需要分配的是一块大的内存，或者small bins和unsorted bin中都找不到合适的 chunk，并且fast bins和unsorted bin中所有的chunk都清除干净了。从large bins中按照“smallest-first，best-fit”原则，找一个合适的 chunk，从中划分一块所需大小的chunk，并将剩下的部分链接回到bins中。若操作成功，则分配结束，否则转到下一步。
+
+9) 如果搜索fast bins和bins都没有找到合适的chunk，那么就需要操作top chunk来进行分配了。判断top chunk大小是否满足所需chunk的大小，如果是，则从top chunk中分出一块来。否则转到下一步。
+
+10) 到了这一步，说明top chunk也不能满足分配要求，所以，于是就有了两个选择: 如果是主分配区，调用sbrk()，增加top chunk大小；如果是非主分配区，调用mmap来分配一个新的sub-heap，增加top chunk大小；或者使用mmap()来直接分配。在这里，需要依靠chunk的大小来决定到底使用哪种方法。判断所需分配的chunk大小是否大于等于 mmap分配阈值，如果是的话，则转下一步，调用mmap分配，否则跳到第12步，增加top chunk 的大小。
+
+11) 使用mmap系统调用为程序的内存空间映射一块chunk_size align 4kB大小的空间。 然后将内存指针返回给用户。
+
+12) 判断是否为第一次调用malloc，若是主分配区，则需要进行一次初始化工作，分配
+
+13) 一块大小为(chunk_size + 128KB) align 4KB大小的空间作为初始的heap。若已经初始化过了，主分配区则调用sbrk()增加heap空间，分主分配区则在top chunk中切割出一个chunk，使之满足分配需求，并将内存指针返回给用户。
+
+glibc内存释放过程
+
+image.png
+1) free()函数同样首先需要获取分配区的锁，来保证线程安全。
+
+2) 判断传入的指针是否为0，如果为0，则什么都不做，直接return。否则转下一步。
+
+3) 判断所需释放的chunk是否为mmaped chunk，如果是，则调用munmap()释放mmaped chunk，解除内存空间映射，该该空间不再有效。如果开启了mmap分配阈值的动态调整机制，并且当前回收的chunk大小大于mmap分配阈值，将mmap分配阈值设置为该chunk的大小，将mmap收缩阈值设定为mmap分配阈值的2倍，释放完成，否则跳到下一步。
+
+4) 判断chunk的大小和所处的位置，若chunk_size <= max_fast，并且chunk并不位于heap的顶部，也就是说并不与top chunk相邻，则转到下一步，否则跳到第6步。（因为与top chunk相邻的小chunk也和 top chunk进行合并，所以这里不仅需要判断大小，还需要判断相邻情况）
+
+5) 将chunk放到fast bins中，chunk放入到fast bins中时，并不修改该chunk使用状态位P。也不与相邻的chunk进行合并。只是放进去，如此而已。这一步做完之后释放便结束了，程序从free()函数中返回。
+
+6) 判断前一个chunk是否处在使用中，如果前一个块也是空闲块，则合并。并转下一步。
+
+7) 判断当前释放chunk的下一个块是否为top chunk，如果是，则转第9步，否则转下一步。
+
+8) 判断下一个chunk是否处在使用中，如果下一个chunk也是空闲的，则合并，并将合并后的chunk放到unsorted bin中。注意，这里在合并的过程中，要更新chunk的大小，以反映合并后的chunk的大小。并转到第10步。
+
+9) 如果执行到这一步，说明释放了一个与top chunk相邻的chunk。则无论它有多大，都将它与top chunk合并，并更新top chunk的大小等信息。转下一步。
+
+10) 判断合并后的chunk 的大小是否大于FASTBIN_CONSOLIDATION_THRESHOLD（默认64KB），如果是的话，则会触发进行fast bins的合并操作，fast bins中的chunk将被遍历，并与相邻的空闲chunk进行合并，合并后的chunk会被放到unsorted bin中。fast bins将变为空，操作完成之后转下一步。
+
+11) 判断top chunk的大小是否大于mmap收缩阈值（默认为128KB），如果是的话，对于主分配区，则会试图归还top chunk中的一部分给操作系统。但是最先分配的128KB空间是不会归还的，ptmalloc 会一直管理这部分内存，用于响应用户的分配请求；如果为非主分配区，会进行sub-heap收缩，将top chunk的一部分返回给操作系统，如果top chunk为整个sub-heap，会把整个sub-heap还回给操作系统。做完这一步之后，释放结束，从 free() 函数退出。可以看出，收缩堆的条件是当前free的chunk大小加上前后能合并chunk的大小大于64k，并且要top chunk的大小要达到mmap收缩阈值，才有可能收缩堆。
+
+glibc使用中的一些问题
+
+后分配的内存先释放，因为ptmalloc收缩内存是从top chunk开始，如果与top chunk相邻的chunk不能释放，top chunk以下的chunk都无法释放。
+
+Ptmalloc不适合用于管理长生命周期的内存，特别是持续不定期分配和释放长生命周期的内存，这将导致ptmalloc内存暴增。如果要用ptmalloc分配长周期内存，在32位系统上，分配的内存块最好大于512K，64位系统上，分配的内存块大小大于32MB。这是由于ptmalloc默认开启mmap分配阈值动态调整功能，512K是32位系统mmap分配阈值的最大值，32MB是64位系统mmap分配阈值的最大值，这样可以保证ptmalloc分配的内存一定是从mmap映射区域分配的，当free时，ptmalloc会直接把该内存返回给操作系统，避免了被ptmalloc缓存。
+
+不要关闭ptmalloc的mmap分配阈值动态调整机制，因为这种机制保证了短生命周期的内存分配尽量从ptmalloc缓存的内存chunk中分配，更高效，浪费更少的内存。如果关闭了该机制，对大于128KB的内存分配就会使用系统调用mmap向操作系统分配内存，使用系统调用分配内存一般会比从ptmalloc缓存的chunk中分配内存慢，特别是在多线程同时分配大内存块时，操作系统会串行调用mmap()，并为发生缺页异常的页加载新物理页时，默认强制清0。频繁使用mmap向操作系统分配内存是相当低效的。使用mmap分配的内存只适合长生命周期的大内存块。
+
+多线程分阶段执行的程序不适合用ptmalloc，这种程序的内存更适合用内存池管理，就像Appach那样，每个连接请求处理分为多个阶段，每个阶段都有自己的内存池，每个阶段完成后，将相关的内存就返回给相关的内存池。Google的许多应用也是分阶段执行的，他们在使用ptmalloc也遇到了内存暴增的相关问题，于是他们实现了TCMalloc来代替ptmalloc，TCMalloc具有内存池的优点，又有垃圾回收的机制，并最大限度优化了锁的争用，并且空间利用率也高于ptmalloc。Ptmalloc假设了线程A释放的内存块能在线程B中得到重用，但B不一定会分配和A线程同样大小的内存块，于是就需要不断地做切割和合并，可能导致内存碎片。
+
+尽量减少程序的线程数量和避免频繁分配/释放内存，Ptmalloc在多线程竞争激烈的情况下，首先查看线程私有变量是否存在分配区，如果存在则尝试加锁，如果加锁不成功会尝试其它分配区，如果所有的分配区的锁都被占用着，就会增加一个非主分配区供当前线程使用。由于在多个线程的私有变量中可能会保存同一个分配区，所以当线程较多时，加锁的代价就会上升，ptmalloc分配和回收内存都要对分配区加锁，从而导致了多线程竞争环境下ptmalloc的效率降低。
+
+防止内存泄露，ptmalloc对内存泄露是相当敏感的，根据它的内存收缩机制，如果与top chunk相邻的那个chunk没有回收，将导致top chunk一下很多的空闲内存都无法返回给操作系统。
+
+防止程序分配过多内存，或是由于Glibc内存暴增，导致系统内存耗尽，程序因OOM(Out Of Memory)被系统杀掉。预估程序可以使用的最大物理内存大小，配置系统的/proc/sys/vm/overcommit_memory，/proc/sys/vm/overcommit_ratio，以及使用ulimt –v限制程序能使用虚拟内存空间大小，防止程序因OOM被杀掉。
+
+内存定位相关API
+struct mallinfo
+
+函数签名如下：
+
+#include <malloc.h>
+struct mallinfo mallinfo(void);
+The mallinfo() function returns a copy of a structure containing information about memory allocations performed by malloc and related functions.  This structure is defined as follows:
+
+struct mallinfo {
+               int arena;     /* Non-mmapped space allocated (bytes) */  -- heap
+               int ordblks;   /* Number of free chunks */
+               int smblks;    /* Number of free fastbin blocks */
+               int hblks;     /* Number of mmapped regions */
+               int hblkhd;    /* Space allocated in mmapped regions (bytes) */  -- map
+               int usmblks;   /* Maximum total allocated space (bytes) */
+               int fsmblks;   /* Space in freed fastbin blocks (bytes) */
+               int uordblks;  /* Total allocated space (bytes) */   -- in use
+               int fordblks;  /* Total free space (bytes) */  -- 空洞
+               int keepcost;  /* Top-most, releasable space (bytes) */
+           };
+从这个函数返回的结构体来分析：
+Arena主要表示Heap上面分配的内存，hblks表示在mmap映射区上面分配的内存，uordblks是程序实际使用的内存，而fordblks就应该对应着内存空洞。
+该函数返回返回heap(main_arena)的内存使用情况，不统计非主分配区的内存情况。
+
+malloc_stats函数
+
+#include <malloc.h>
+void malloc_stats(void);
+The malloc_stats() function prints (on standard error) statistics about memory allocated by malloc and related functions. For each arena (allocation area), this function prints the total amount of memory allocated and the total number of bytes consumed by in-use allocations. (These two values correspond to the arena and uordblks fields retrieved by mallinfo.) In addition, the function prints the sum of these two statistics for all arenas, and the maximum number of blocks and bytes that were ever simultaneously allocated using mmap.
+
+该函数将glibc中所有分配区的内存使用情况都输出到stderr，可以通过freopen重定向到指定的文件中去。
+
+输出的样例如下：
+
+Arena 0:
+system bytes     =   29634560
+in use bytes     =   29211840
+
+Arena 1:
+system bytes     =   61935616
+in use bytes     =   61141240
+
+Arena 2:
+system bytes     =   12419072
+in use bytes     =   11500368
+
+Total (incl. mmap):
+system bytes     =  683708416
+in use bytes     =  681572616
+max mmap regions =         34
+max mmap bytes   =  594857984
+
+其中Arena表示分配区
+system bytes表示glibc分配的总虚拟内存，in use bytes表示正在被使用的虚拟内存。
+malloc_info 函数
+
+#include <malloc.h>
+int malloc_info(int options, FILE *fp);
+The malloc_info() function exports an XML string that describes the current state of the memory-allocation implementation in the caller.
+The string is printed on the file stream fp. The exported string includes information about all arenas
+As currently implemented, options must be zero。
+
+<malloc version="1">
+       <heap nr="0">
+              <sizes>
+              </sizes>
+              <total type="fast" count="0" size="0"/>
+              <total type="rest" count="0" size="0"/>
+              <system type="current" size="1081344"/>
+              <system type="max" size="1081344"/>
+              <aspace type="total" size="1081344"/>
+              <aspace type="mprotect" size="1081344"/>
+       </heap>
+       <heap nr="1">
+              <sizes>
+              </sizes>
+              <total type="fast" count="0" size="0"/>
+              <total type="rest" count="0" size="0"/>
+              <system type="current" size="1032192"/>
+              <system type="max" size="1032192"/>
+              <aspace type="total" size="1032192"/>
+              <aspace type="mprotect" size="1032192"/>
+       </heap>
+       <total type="fast" count="0" size="0"/>
+       <total type="rest" count="0" size="0"/>
+       <system type="current" size="2113536"/>
+       <system type="max" size="2113536"/>
+       <aspace type="total" size="2113536"/>
+       <aspace type="mprotect" size="2113536"/>
+</malloc>
+Glibc的Hook函数
+
+#include <malloc.h>
+void *(*__malloc_hook)(size_t size, const void *caller);
+void *(*__realloc_hook)(void *ptr, size_t size", const void *" caller );
+
+void *(*__memalign_hook)(size_t alignment, size_t size,
+         const void *caller);
+void (*__free_hook)(void *ptr, const void *caller);
+void (*__malloc_initialize_hook)(void);
+void (*__after_morecore_hook)(void);
+具体用法可以参见：http://linux.die.net/man/3/__malloc_hook
+
+linux相关内存定位命令
+vmstat命令
+
+vmstat命令是最常见的Linux/Unix监控工具，可以展现给定时间间隔的服务器的状态值,包括服务器的CPU使用率，内存使用，虚拟内存交换情况,IO读写情况。
+
+一般vmstat工具的使用是通过两个数字参数来完成的，第一个参数是采样的时间间隔数，单位是秒，第二个参数是采样的次数，如:
+
+root@ubuntu:~# vmstat 2 1
+procs -----------memory---------- ---swap-- -----io---- -system-- ----cpu----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa
+ 1  0   0 3498472 315836 3819540    0    0     0     1    2    0  0  0 100  0
+image.png
+
+pmap命令
+
+名称：
+pmap - report memory map of a process(查看进程的内存映像信息)
+
+扩展格式和设备格式域：
+
+        Address:  start address of map  映像起始地址
+        Kbytes:  size of map in kilobytes  映像大小
+        RSS:  resident set size in kilobytes  驻留集大小
+        Dirty:  dirty pages (both shared and private) in kilobytes  脏页大小
+        Mode:  permissions on map 映像权限: r=read, w=write, x=execute, s=shared, p=private (copy on write)  
+        Mapping:  file backing the map , or '[ anon ]' for allocated memory, or '[ stack ]' for the program stack.  映像支持文件,[anon]为已分配内存 [stack]为程序堆栈
+        Offset:  offset into the file  文件偏移
+        Device:  device name (major:minor)  设备名
+[root@C44 ~]#  pmap -d 1
+1:   init [5]                    
+Address   Kbytes Mode  Offset           Device    Mapping
+00934000      88 r-x-- 0000000000000000 008:00005 ld-2.3.4.so
+0094a000       4 r---- 0000000000015000 008:00005 ld-2.3.4.so
+0094b000       4 rw--- 0000000000016000 008:00005 ld-2.3.4.so
+0094e000    1188 r-x-- 0000000000000000 008:00005 libc-2.3.4.so
+00a77000       8 r---- 0000000000129000 008:00005 libc-2.3.4.so
+00a79000       8 rw--- 000000000012b000 008:00005 libc-2.3.4.so
+00a7b000       8 rw--- 0000000000a7b000 000:00000   [ anon ]
+00a85000      52 r-x-- 0000000000000000 008:00005 libsepol.so.1
+00a92000       4 rw--- 000000000000c000 008:00005 libsepol.so.1
+00a93000      32 rw--- 0000000000a93000 000:00000   [ anon ]
+00d9d000      52 r-x-- 0000000000000000 008:00005 libselinux.so.1
+00daa000       4 rw--- 000000000000d000 008:00005 libselinux.so.1
+08048000      28 r-x-- 0000000000000000 008:00005 init
+0804f000       4 rw--- 0000000000007000 008:00005 init
+084e1000     132 rw--- 00000000084e1000 000:00000   [ anon ]
+b7f5d000       8 rw--- 00000000b7f5d000 000:00000   [ anon ]
+bffee000      72 rw--- 00000000bffee000 000:00000   [ stack ]
+ffffe000       4 ----- 0000000000000000 000:00000   [ anon ]
+mapped: 1700K    writeable/private: 276K    shared: 0K
+在输出样例中：
+mapped 表示该进程映射的虚拟地址空间大小，也就是该进程预先分配的虚拟内存大小，即ps出的vsz
+writeable/private 表示进程所占用的私有地址空间大小，也就是该进程实际使用的内存大小 shared 表示进程和其他进程共享的内存大小
+
+进程状态文件辅助查看内存信息
+/proc/pid/statm
+
+image.png
+
+/proc/pid/stat
+
+linux:/opt# cat /proc/27759/stat
+
+27759 (proc) S 10933 27759 3238 0 -1 8388864 23840264 11421 45 0 176394 32845 2 4 18 0 75 54834902 54834194 933576704 77805 4294967295 134512640 144173964 3218373568 3218373152 4294960144 0 0 0 2147221231 4294967295 0 0 17 3 0 0 0
+vsize=933576704（bytes） 该任务的虚拟地址空间大小
+rss=77805 (page) 该任务当前驻留物理地址空间的大小, 转换成bytes的公式：
+((x) << (PAGE_SHIFT - 10))， 在Linux，PAGE_SHIFT等于12，也就是page是4K。
+Number of pages the process has in real memory,minu 3 for administrative purpose.
+这些页可能用于代码，数据和栈。
+rlim=4294967295（bytes） 该任务能驻留物理地址空间的最大值
+start_code=134512640该任务在虚拟地址空间的代码段的起始地址
+end_code=144173964该任务在虚拟地址空间的代码段的结束地址
+start_stack=3218373568该任务在虚拟地址空间的栈的结束地址
+
+/proc/pid/status
+
+该文件下面内存相关的参数：
+
+VmPeak: 60184 kB /进程地址空间的大小/
+VmSize: 60180 kB /进程虚拟地址空间的大小reserved_vm：进程在预留或特殊的内存间的物理页/
+VmLck: 0 kB /进程已经锁住的物理内存的大小.锁住的物理内存不能交换到硬盘/
+VmHWM: 18020 kB /文件内存映射和匿名内存映射的大小/
+VmRSS: 18020 kB /应用程序正在使用的物理内存的大小，就是用ps命令的参数rss的值 (rss)/
+VmData: 12240 kB /程序数据段的大小（所占虚拟内存的大小），存放初始化了的数据/
+VmStk: 84 kB /进程在用户态的栈的大小/
+VmExe: 576 kB /程序所拥有的可执行虚拟内存的大小,代码段,不包括任务使用的库 /
+VmLib: 21072 kB /被映像到任务的虚拟内存空间的库的大小/
+
+/proc/pid/maps
+
+查看进程的虚拟地址空间是如何使用的。
+该文件有6列，分别为：
+地址：库在进程里地址范围
+权限：虚拟内存的权限，r=读，w=写,x=执行,s=共享,p=私有；
+偏移量：库在进程里地址偏移量
+设备：映像文件的主设备号和次设备号，可以通过通过 cat /proc/devices查看设备号对应的设备名
+节点：映像文件的节点号；
+路径: 映像文件的路径，经常同一个地址有两个地址范围，那是因为一段是r-xp为只读的代码段，一段是rwxp为可读写的数据段。
+每项都与一个vm_area_struct结构成员对应
+
+[root@localhost ~]# cat /proc/7114/maps
+08047000-080dc000 r-xp 00000000 03:06 884901 /bin/bash
+080dc000-080e3000 rwxp 00094000 03:06 884901 /bin/bash
+080e3000-08129000 rwxp 080e3000 00:00 0 [heap]
+4d575000-4d58a000 r-xp 00000000 03:06 736549 /lib/ld-2.3.4.so
+4d58a000-4d58b000 r-xp 00015000 03:06 736549 /lib/ld-2.3.4.so
+4d58b000-4d58c000 rwxp 00016000 03:06 736549 /lib/ld-2.3.4.so
+4d58e000-4d6b1000 r-xp 00000000 03:06 736550 /lib/tls/libc-2.3.4.so
+4d6b1000-4d6b2000 r-xp 00123000 03:06 736550 /lib/tls/libc-2.3.4.so
+4d6b2000-4d6b5000 rwxp 00124000 03:06 736550 /lib/tls/libc-2.3.4.so
+4d6b5000-4d6b7000 rwxp 4d6b5000 00:00 0
+4d6de000-4d6e0000 r-xp 00000000 03:06 736552 /lib/libdl-2.3.4.so
+4d6e0000-4d6e2000 rwxp 00001000 03:06 736552 /lib/libdl-2.3.4.so
+4d807000-4d80a000 r-xp 00000000 03:06 736567 /lib/libtermcap.so.2.0.8
+4d80a000-4d80b000 rwxp 00002000 03:06 736567 /lib/libtermcap.so.2.0.8
+b7bf2000-b7c1e000 r-xp 00000000 03:06 881337 /usr/lib/gconv/GB18030.so
+b7c1e000-b7c20000 rwxp 0002b000 03:06 881337 /usr/lib/gconv/GB18030.so
+b7c20000-b7c26000 r-xs 00000000 03:06 881502 /usr/lib/gconv/gconv-modules.cache
+b7c26000-b7d2f000 r-xp 02197000 03:06 852489 /usr/lib/locale/locale-archive
+b7d2f000-b7f2f000 r-xp 00000000 03:06 852489 /usr/lib/locale/locale-archive
+b7f2f000-b7f38000 r-xp 00000000 03:06 734450 /lib/libnss_files-2.3.4.so
+b7f38000-b7f3a000 rwxp 00008000 03:06 734450 /lib/libnss_files-2.3.4.so
+b7f3a000-b7f3c000 rwxp b7f3a000 00:00 0
+b7f51000-b7f52000 rwxp b7f51000 00:00 0
+bfc3d000-bfc52000 rw-p bfc3d000 00:00 0 [stack]
+ffffe000-fffff000 ---p 00000000 00:00 0 [vdso]
+top命令
+
+这个就不说了，大家都知道的命令
+
+内存定位工具
+valgrind
+
+valgrind工具网上有很多介绍，这里简单介绍一下：
+Valgrind是一套Linux下，开放源代码（GPL V2）的仿真调试工具的集合。Valgrind由内核（core）以及基于内核的其他调试工具组成。内核类似于一个框架（framework），它模拟了一个CPU环境，并提供服务给其他工具；而其他工具则类似于插件 (plug-in)，利用内核提供的服务完成各种特定的内存调试任务。Valgrind的体系结构如下图所示：
+Valgrind 体系结构
+image.png
+
+Valgrind包括如下一些工具：
+
+Memcheck。这是valgrind应用最广泛的工具，一个重量级的内存检查器，能够发现开发中绝大多数内存错误使用情况，比如：使用未初始化的内存，使用已经释放了的内存，内存访问越界等。
+Callgrind。它主要用来检查程序中函数调用过程中出现的问题。
+Cachegrind。它主要用来检查程序中缓存使用出现的问题。
+Helgrind。它主要用来检查多线程程序中出现的竞争问题。
+Massif。它主要用来检查程序中堆栈使用中出现的问题。
+Extension。可以利用core提供的功能，自己编写特定的内存调试工具。
+valgrind内存检查原理
+image.png
+Memcheck 能够检测出内存问题，关键在于其建立了两个全局表。
+
+Valid-Value 表：
+对于进程的整个地址空间中的每一个字节(byte)，都有与之对应的 8 个 bits；对于 CPU 的每个寄存器，也有一个与之对应的 bit 向量。这些 bits 负责记录该字节或者寄存器值是否具有有效的、已初始化的值。
+Valid-Address 表
+对于进程整个地址空间中的每一个字节(byte)，还有与之对应的 1 个 bit，负责记录该地址是否能够被读写。
+检测原理：
+
+当要读写内存中某个字节时，首先检查这个字节对应的 A bit。如果该A bit显示该位置是无效位置，memcheck 则报告读写错误。
+内核（core）类似于一个虚拟的 CPU 环境，这样当内存中的某个字节被加载到真实的 CPU 中时，该字节对应的 V bit 也被加载到虚拟的 CPU 环境中。一旦寄存器中的值，被用来产生内存地址，或者该值能够影响程序输出，则 memcheck 会检查对应的V bits，如果该值尚未初始化，则会报告使用未初始化内存错误。
+Valgrind基本功能介绍
+1，使用未初始化的内存(Use of uninitialised memory)
+2，使用已经释放了的内存(Reading/writing memory after it has been free'd)
+3，使用超过malloc分配的内存空间(Reading/writing off the end of malloc'd blocks)
+4，对堆栈的非法访问(Reading/writing inappropriate areas on the stack)
+5，申请的空间是否有释放(Memory leaks -- where pointers to malloc'd blocks are lost forever)
+6，malloc/free/new/delete申请和释放内存的匹配(Mismatched use of malloc/new/new [] vs free/delete/delete [])
+7，src和dst的重叠(Overlapping src and dst pointers in memcpy() and related functions)
+
+工具约束：
+
+Valgrind不会对静态数组(分配在栈上)进行边界检查。
+Valgrind占用内存很高，不适合压力测试，只适合覆盖测试。
+自己接管内存分配和释放接口
+
+这是一个很常见的办法，就是自己接管内存分配和释放，这样自己就可以很容易全局管理自己的内存，对于内存泄露就很容易实现。
+比如自己构造内存池，重载new/delete等手段。
+
+ASAN
+
+这个工具这里不介绍了，传送门：http://3ms.huawei.com/hi/group/3064219/thread_6153835.html?mapId=7744335
+
+具体内存问题
+内存泄露
+
+由于疏忽或错误造成程序未能释放已经不再使用的内存的情况。内存泄漏并非指内存在物理上的消失，而是应用程序分配某段内存后，由于设计错误，失去了对该段内存的控制，因而造成了内存的浪费。
+
+A memory leak is a particular type of unintentional memory consumption by a computer program where the program fails to release memory when no longer needed. This condition is normally the result of a bug in a program that prevents it from freeing up memory that it no longer needs.This term has the potential to be confusing, since memory is not physically lost from the computer. Rather, memory is allocated to a program, and that program subsequently loses the ability to access it due to program logic flaws.
+
+泄露主要分为两种：
+
+堆内存泄漏（Heap leak）。对内存指的是程序运行中根据需要分配通过malloc,realloc new等从堆中分配的一块内存，再是完成后必须通过调用对应的 free或者delete 删掉。如果程序的设计的错误导致这部分内存没有被释放，那么此后这块内存将不会被使用，就会产生Heap Leak.
+
+系统资源泄露（Resource Leak）.主要指程序使用系统分配的资源比如 Bitmap, handle , SOCKET等没有使用相应的函数释放掉，导致系统资源的浪费，严重可导致系统效能降低，系统运行不稳定。 关于资源泄露会在单独章节里面讲解，这里就不会展开。
+
+如何定位内存泄露
+
+如果发现进程出现了core dump，从core文件和黑匣子可以看出是new/new[]申请内存失败，并且是SignalNo:6,SignalName:SIGABRT导致的core。那么可以认为是内存泄露或者内存空洞导致内存申请失败。
+
+内存泄露定位一般就是几种方法：
+
+检视代码，重点检查new/delete，尤其是异常分支的返回
+使用valgrind工具
+自己接管内存管理，比如自己分配和回收内存。
+如何定位资源泄露
+
+常见的资源泄露场景：
+
+申请的内存没有释放。new/malloc—>delete/free
+打开的文件句柄没有释放。 fopen/opendir-->fclose/closedir
+socket的资源没有释放。
+Windows下GDI，HANDLE资源泄露。
+打开的动态库文件没有释放。 dlopen-->dlclose
+在Linux下定位资源泄露一般都两个方法
+
+lsof命令
+/proc/pid/fd目录
+通过这两个目录可以很方便地看到打开的文件句柄，打开的socket，看看是否有泄露。
+
+内存空洞
+
+从Glibc的内存管理可以看出：
+
+--------——|-----------|-------------|------------------------------------堆顶
+使用中内存A 释放的内存B 使用中内存C 释放的内存D
+
+glibc管理的内存唯一释放的条件是堆顶存在128k（M_TRIM_THRESHOLD）或以上的空闲区时才会释放，比如只有D才有被归还系统的可能，B就成为内存空洞，虽然未来的分配还能用到，但释放不掉。
+
+如果是通过mmap申请的内存，释放的时候是直接还给操作系统，不会产生空洞。
+
+如何定位是内存空洞：
+
+就是将前面讲的malloc_stats方法来将进程的虚拟内存记录保存下来，比如1分钟打印一次：
+image.png
+
+从上图可以考到system bytes和in use bytes。
+如果(system bytes - in use bytes)一直在增加，那么表示内存空洞在增加，如果这个差值达到了400~500M，应该就是内存空洞导致内存申请失败。
+如果(system bytes - in use bytes)一直基本保持稳定，但是system bytes和in use bytes也一直在增加，就有可能是内存泄露。
+
+内存越界
+
+所谓内存越界（Heap Corruption），就是指当内存输入超出了预分配的空间大小，就会覆盖该空间之后的一段存储区域，导致系统异常。
+由于内存越界有很强的滞后性，往往出错的地方并不是真正内存越界的地方。
+读写越界都可能导致程序出现异常。
+
+内存越界问题是最难定位的，因为很多时候你不知道什么时候出现了踩内存，死机的时候不一定是踩内存的现场。
+
+如何定位内存越界问题
+
+内存越界导致程序core dump一般都是由于11信号量导致的：
+Program received signal SIGSEGV(11), Segmentation fault.
+
+内存越界一般由几个工具可以尝试一下：
+
+valgrind工具
+GDB的观察某个值或者内存断点
+int main(void)
+
+{
+       int sum = 0, i = 0;
+       char input[5] = {0};
+       int j = 0;
+       //while (1) {
+              sum = 0;
+              memcpy(input, "123459", 6);
+              for (i = 0; input[i] != '\0'; i++)
+                     sum = sum*10 + input[i] - '0';
+              printf("input=%d\n", sum);
+              j++;
+       //}
+       return 0;
+}
+Breakpoint 1, main () at zhanghui.cpp:9
+9            int sum = 0, i = 0;
+(gdb) n
+10           char input[5] = {0};
+(gdb) x/7b input
+0x7fffffffdf70:       0     0     0     0     0     0     0
+(gdb) watch input[5]  //观察input[5] 这个字符的值
+Hardware watchpoint 2: input[5]
+(gdb) n
+11           int j = 0;
+(gdb) n
+13                  sum = 0;
+(gdb) n
+14                  memcpy(input, "123459", 6);
+(gdb) n
+Hardware watchpoint 2: input[5]
+
+
+Old value = 0 '\000'
+New value = 57 '9'  
+0x00007ffff73566a9 in memcpy () from /lib64/libc.so.6  //input[5]被修改
+(gdb)
+ASAN工具
+依赖内存哨兵的性质，在内存中进行只读内存的打点，一旦触发了内存越界，那么将触发死机信号，就可以根据堆栈看到是哪里进行踩内存了。
+总结
+由于C/C++需要程序员自己管理内存，那么内存问题是必然存在的，即使程序员多么小心，都会不小心遇到内存问题， 及时有很多工具和方法，但是内存问题很多都是体力活，需要耗费大量的时间去定位，并且很多偶现问题都定位不出来了。除了换成带有GC的语言以外，我们应该如何降低内存问题的发生概率呢？
+
+使用智能指针
+使用RAII技术
+基于大对象和小对象的合理组合，减少小对象的申请和释放
+自己管理内存
+根据自己的内存模型选择其他内存管理组件，比如tcmalloc
