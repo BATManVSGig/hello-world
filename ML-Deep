@@ -1,3 +1,16 @@
+https://github.com/BVLC/caffe
+https://github.com/fchollet/keras
+<<https://github.com/songrotek/Deep-Learning-Papers-Reading-Roadmap>>
+https://github.com/Microsoft/CNTK
+https://github.com/terryum/awesome-deep-learning-papers
+https://github.com/dmlc/mxnet
+https://github.com/donnemartin/data-science-ipython-notebooks
+https://github.com/ty4z2008/Qix
+https://github.com/karpathy/convnetjs
+https://github.com/exacity/deeplearningbook-chinese
+
+
+
 分布式TensorFlow中ps、worker、in-graph、between-graph、synchronous training和asynchronous training的概念
 在大数据和分布式的场景下一般使用异步训练
 通过Google Cloud ML服务，我们可以把TensorFlow应用代码直接提交到云端运行，甚至可以把训练好的模型直接部署在云上，通过API就可以直接访问
