@@ -1,3 +1,12 @@
+XFDTD硬件加速能力强
+
+解决电大尺寸复杂精细结构问题时需要大量网格，即使计算复杂度最低的 XFdtd 也需要大量计算时间。对于天线布局问题，天线的位置、几何结构参数、材料参数等都可能
+是不确定的，需要进行多次仿真对比，仿真进程严重受限于运算速度。在实际工程项目中，如何缩短仿真周期，提高工作效率，在最短时间内给出工程上合理的仿真结果直
+接决定项目的成败。XStream 利用最先进的图形显卡技术，动态地改变处理速度，实现了基于串行浮点运算中的现代电子图形卡的GPU 计算功能，能显著提高 XFdtd 运算
+速度。
+
+新一代XStream 采用NVIDIA CUDA 架构的GPU，根据工程大小和 GPU 配置的不同，计算速度比 64位的单CPU 快 50~300 倍。
+
 深度学习利器： TensorFlow系统架构及高性能程序设计
 http://www.infoq.com/cn/articles/tensorflow-architecture-and-programming?hmsr=toutiao.io&utm_medium=toutiao.io&utm_source=toutiao.io 
 TensorFlow实战：
