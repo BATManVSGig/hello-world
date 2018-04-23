@@ -1,3 +1,6 @@
+https://wiki.sei.cmu.edu/confluence/display/c/INT13-C.+Use+bitwise+operators+only+on+unsigned+operands C3.1：避免对有符号整数进行位操作符运算
+https://zh.wikipedia.org/wiki/C%E8%AF%AD%E8%A8%80 对C操作的安全指导
+
 https://shattered.it/static/shattered.pd 破解SHA-1 计算量巨大
 
 XFDTD硬件加速能力强
