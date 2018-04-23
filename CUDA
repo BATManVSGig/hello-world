@@ -1,5 +1,9 @@
-https://wiki.sei.cmu.edu/confluence/display/c/INT13-C.+Use+bitwise+operators+only+on+unsigned+operands C3.1：避免对有符号整数进行位操作符运算
-https://zh.wikipedia.org/wiki/C%E8%AF%AD%E8%A8%80 对C操作的安全指导
+G TS33.501
+安全重要课题： UE接入外部网络，服务化架构，核心网安全，G截断1密钥架构，多网融合安全，G阶段1安全算法，IMS紧急安全，非3接入安全，短信安全，无线接入安全
+C3.1：避免对有符号整数进行位操作符运算
+https://wiki.sei.cmu.edu/confluence/display/c/INT13-C.+Use+bitwise+operators+only+on+unsigned+operands 
+对C操作的安全指导
+https://zh.wikipedia.org/wiki/C%E8%AF%AD%E8%A8%80 
 
 https://shattered.it/static/shattered.pd 破解SHA-1 计算量巨大
 
