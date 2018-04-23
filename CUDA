@@ -1,5 +1,7 @@
 G TS33.501
 安全重要课题： UE接入外部网络，服务化架构，核心网安全，G截断1密钥架构，多网融合安全，G阶段1安全算法，IMS紧急安全，非3接入安全，短信安全，无线接入安全
+广播多播安全，IOT场景下远程预装，小数据安全，网络切片安全，256比特算法应用
+
 C3.1：避免对有符号整数进行位操作符运算
 https://wiki.sei.cmu.edu/confluence/display/c/INT13-C.+Use+bitwise+operators+only+on+unsigned+operands 
 对C操作的安全指导
