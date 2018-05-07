@@ -10,6 +10,62 @@ http://homepages.cae.wisc.edu/%7Eece734/
 进阶：《effectiv c++》《more effective c++》
 高级：《深度探索c++模型》
 ----------------------------------------------------------
+Synplify 逻辑设计流程
+HDL design Entry
+-> Logic Optimization
+   ->Technology Mapping
+       ->Placement
+           ->Routing
+              ->FPGA Configuration
+1创建源文件和工程    Run->Syntax Check   Shift+F7     Run->Synthesis Check Shift+F8   Tcl窗口来分析详细的错误信息  
+2设置约束，属性和选项 Impementation Options按钮  Device 扇出数目 多点综合时序数据 Update Compile Point Timing Data 模块验证 模块化设计 Modular Design 时序调整优化 Retiming
+Constraints Impementation Results 可选的输出 中选择是否产生Verilog和VHDL网表文件以及是否产生第三方的约束文件
+
+在版本集合属性窗口中，有一项为“VHDL”。在这里我们同样可以设置顶层模块、重新设置参数，而且还可以设置VHDL状态机的属性
+
+SCOPE（Synthesis Constraint Optimization Environment－综合约束与优化环境）窗口中编辑约束
+使用默认的约束 
+Edit->Insert Quick
+时钟约束的定义
+时钟频率  Frequency Period；Rise At ， Fall At来决定占空比
+软件一般会自动对时钟加上全局时钟资源从而获得比较小的延时和抖动
+对于某个时钟的上升或下降沿到另一个时钟的上升或下降沿的相关的延迟约束在子表“Clock to Clock”中定义。该项目可以用来约束两个时钟沿的相差的程度，从而使得两个时钟域中互连路径需要考虑该延迟，如果在delay中选择false则代表不关心两个时钟域之间的信号路径
+I/O约束的定义；失败路径的约束；	定义寄存器约束；定义多时钟周期约束；最大路径延迟；定义编译点；	综合属性约束
+3结果分析
+综合log文件（.srr）第三方综合网表文件 编译输出文件（.srs）映射输出文件（.srm）设计组成文件（.info）状态机信息文件（.fse）用户时序报告文件（.ta）用户映射结果文件（_ta.srm）中间映射文件（.srd）前标约束文件 Verilog/VHDL网表结果文件
+通过log文件来分析结果
+时序结果分析；检查资源使用情况；检查提示、告警和错误信息；
+这种告警是指综合软件产生了在RTL代码中没有明确申明的对象
+纯组合逻辑的case语句条件不全时没有default或者是if语句没有else，从而导致软件为了状态稳定必须生成一个锁存
+敏感变量不全
+出现这种告警是因为某个输入未使用
+这是指在内部互连的某个模块的某个输入值没有驱动
+消除复制实体
+RTL View即寄存器传输级视图；Technology View即工艺结构视图 HDL Analyst->RTL/Technology->Hierarchical View；HDL Analyst->RTL/Technology->Flatened View
+过滤视图，	扩展视图，HDL Analyst->Technology->Flattened Critical Path打开平视图
+打开Technology视图
+4设计优化
+在代码中对编码风格进行优化，去除不必要的电路，在时序不满足的路径上用case语句代替if－else语句
+可以使用综合属性syn_encoding确保状态机不会因为出现非法状态而死锁
+确认源代码支持特殊结构例如block ram的实例化
+使用分层优化会对很多设计产生很好的优化效果。我们可以设置综合属性syn_hier来实现
+对于时序逻辑最好清晰的定义每一个时钟的频率，避免使用统一的时钟频率进行优化
+面积优化
+设置中增大扇出系数，意味着低速度
+使用资源共享选项（Resource sharing）导致低速度
+在大状态机中使用格雷码或者是连续编码而不是one－hot
+在较小的CPLD设计中使用分层优化属性syn_hier5.1.3	
+速度优化
+使用比实际要求高出约10％－15％的约束
+选择合适的扇出系数－参见前面对扇出的描述
+如果逻辑冲突路径中使用了算法单元
+布局布线的时序和综合时序不一致加入“Route”选项值
+在状态机中使用one－hot编码
+使用综合指示syn_tpd、syn_tco、syn_tso
+寄存器都有确定的初始态
+使用pipelining选项：在我们使用ROM或者乘法器等元件的时候使用了该选项能够将寄存器位置移动使得时序均衡
+使用retiming选项
+-------------------------------------------------------------
 DFG不是用来“全面”描述DSP的，它是专用于突出数据之间的依赖关系和节点计算时间的
 
 DFG主要用在高层次综合中，它将DSP应用的并发实现方法推导到并行硬件上，其中子任务的调度以及资源分配是主要关心的目标（调度是指确定节点何时并且在哪个硬件单元中执行）。
