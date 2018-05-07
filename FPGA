@@ -1,4 +1,263 @@
 www.edacn.com
+www.chnxp.com.cn 免费电子书
+电子系统设计的描述等级
+1、行为级
+2、RTL级（Register transfer level）
+3、逻辑门级
+4、版图级
+用VHDL可以描述以上四个等级
+
+Entity(实体）
+Architecture 1（构造体）
+process(进程结构） subprograms(子程序） block(块结构）
+                 procedure（过程）   function(函数）
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.std_logic_unsigned.all;
+entity count is
+    port (  clock,reset: in STD_LOGIC;
+            dataout: out STD_LOGIC_VECTOR (3 downto 0)   );
+end count;
+architecture behaviorl of count is
+  signal databuffer:  STD_LOGIC_VECTOR (3 downto 0);
+ begin
+  dataout<=databuffer; 
+   process(clock,reset)
+    begin
+      if (reset='1') then      databuffer<="0000";
+       elsif (clock'event and clock='1') then  
+         if databuffer="1000"   then
+          databuffer<="0000";   else    databuffer<=databuffer+'1';
+        end if;
+      end if;
+   end process;        
+ end  behavioral;
+
+VHDL结构要点
+ENTITY（实体）
+格式： 
+      Entity  实体名  IS
+               [类属参数说明]
+               [端口说明]
+      End Entity；  
+  其中端口说明格式为：
+  PORT(端口名1，端口名N：方向：类型）
+  其中方向有: IN , OUT, INOUT, BUFFER, LINKAGE
+
+In 信号只能被引用,不能被赋值
+out 信号只能被赋值,不能被引用
+buffer 信号可以被引用,也可以被赋值
+
+In  不可以出现在<= 或  : = 的左边
+out不可以出现在<= 或  : = 的右边
+buffer可以出现在<= 或  : = 的两边
+
+(HalfAdd) (FullAdd)
+
+Arcthitecture 构造体名 of  实体名  is 
+       [定义语句] 内部信号、常数、元件、数据类型、函数等的定义
+     begin 
+       [并行处理语句和block、process、function、procedure]
+     end 构造体名；
+     
+除了entity(实体)和architecture(构造体)外还有
+另外三个可以独立进行编译的设计单元
+
+Package（包集合）属于库结构的一个层次，存放信号定义、常数定义、数据类型、元件语句、函数定义和过程定义。
+Package Body 具有独立对端口(port)的package
+configuration（配置）描述层与层之间的连接关系以及实体与构造体之间关系。
+
+库： 数据的集合。内含各类包定义、实体、构造体等
+STD库    --VHDL的标准库
+IEEE库   -- VHDL的标准库的扩展
+面向ASIC的库 --不同的工艺
+不同公司自定义的库
+普通用户自己的库
+
+用户自己的库
+    当您的VHDL文件被编译后，编译的结果储存在特定的目录下，这个目录的逻辑名称即Library，此目录下的内容亦即是这个Library的内容。
+
+对象object
+    对客观实体的抽象和概括
+VHDL中的对象有：
+1、Constant（常量）在程序中不可以被赋值 
+2、Variable（变量）在程序中可以被赋值(用“: =”)，赋值后立即变化为新值。 
+3、Signal（信号）在程序中可以被赋值(用“<=”) ，但不立即更新，当进程挂起后，才开始更新。
+
+VHDL中的对象使用：
+ variable  
+     x，y：integer；--定义了整数型的变量对象x，y
+    
+ constant  
+     Vcc：real；--定义了实数型的常量对象Vcc
+
+  signal 
+    clk，reset：bit；--定义了位类型的信号对象clk，reset
+
+variable只能定义在process和subprogram（包括function和procedure）中，不可定以在其外部。
+2、signal不能定义在process和subprogram（包括function和procedure）中，只可定以在其外部。
+
+对象的属性
+   类似于其它面向对象的编程语言如VB、VC、DELPHI
+     用法格式：对象 ’ 属性       
+     例       子：clk’event      --表明信号clk的event属性
+ 常用的属性：
+  Signal 对象的常用属性有：
+   event ： 返回boolean值，信号发生变化时返回true
+   last_value：返回信号发生此次变化前的值
+   last_event：返回上一次信号发生变化到现在变化的间隔时间
+
+Signal 对象的常用属性有：接上页
+
+delayed[(时延值)]: 使信号产生固定时间的延时并返回
+stable[(时延值)]: 返回boolean, 信号在规定时间内没有变化返回true
+transaction: 返回bit类型，信号每发生一次变化，返回值翻转一次
+A<=B’delayed(10 ns)；    --B延时10ns后赋给A；
+           if（B’Stable(10 ns)）；    --判断B在10ns中是否发生变化
+           
+信号的event和last_value属性经常用来确定信号的边沿          
+判断clk的上升沿
+if （ (clk’event)and (clk=‘1’) and(clk’last_value=‘0’)） then
+判断clk的下降沿
+if （ (clk’event)and (clk=‘0’) and(clk’last_value=‘1’)） then
+
+bit(位)： `0` 和`1`
+2、bit-Vector(位矢量)： 例如：``00110``
+3、Boolean “ ture”和“false”
+4、time  例如：1 us、100 ms，3 s
+5、character 例如：‘a’、’n’、’1’、 ’0’
+6、string  例如：“sdfsd”、”my design”
+7、integer  32位例如：1、234、-2134234
+8、real 范围-1.0E38~+1.0E38 
+             例如：1.0、2.834、3.14、0.0
+
+natural  自然数 和 positive 正整数
+10、senverity level  （常和assert语句配合使用）
+       包含有：note、warning、error、failure
+   
+以上十种类型是VHDL中的标准类型，在编程中可以直接使用。使用这十种以外的类型，需要自行定义或指明所引用的Library(库)和Package(包)集合
+
+例子中信号Z有两个驱动A和B；Z必须定义为一种新的数据类型，否则Z将无法决定取值，语句视为非法。
+通用格式
+   TYPE 类型名  IS  数据类型定义 
+用户可以定义的数据类型
+枚举类型enumberated、整数型integer、
+实数型real、数组类型array、
+纪录类型record、时间类型time、
+文件类型file、存取类型access
+
+枚举类型enumberated
+格式
+  type 数据类型名 is （元素，元素…...）;
+例子
+  type week is (sun,mon,tue,thu,fri,sat);
+  type std_logic is (‘1’,’0’,’x’,’z’);
+整数类integer和实数类real
+格式
+  type 数据类型名 is 数据类型定义  约束范围;
+例子
+  type  week is   integer range 1 to 7;
+  type  current is   real   range -1E4 to 1E4 
+引用时间时，有的编译器要求量 与单位 之间应有一个空格如：1 ns；不能写为1ns；
+纪录类型record
+格式
+  type 数据类型名 is  recoerd 
+    元素名:数据类型名;
+    元素名:数据类型名;
+     ….
+  end record;
+   1、VHDL属于强类型，不同类型之间不能进行运算和赋值，可以进行数据类型转换
+   2、vector不表示number
+   3、array 不表示number
+通过本讲您将会学到
+1、Block的编写
+2、Process的编写
+3、function 和 procedure的编写
+4、VHDL中的流程控制语句的书写
+Architecture 中的语句及子模块之间是并行处理的
+子模块block中的语句是并行处理的
+子模块process中的语句是顺序处理的
+子模块subprogram中的function和procedure是顺序处理的
+
+Arcthitecture 构造体名 of  实体名  is 
+      [定义语句] 内部信号、常数、元件、数据类型、函数等的定义
+     begin 
+      [并行处理语句和block、process、function、procedure]
+     end 构造体名；
+ BLOCK  [（布尔表达式）] 
+      [定义语句]
+       begin
+         [并行处理语句concurrent statement
+         [信号]<= guarded   [信号,延时] ;
+     end block  块名
+[进程名：]  
+   process  [（触发信号列表）]
+     [定义语句；]
+   begin
+     [串行处理语句sequential statement；]
+   end process
+Process中敏感信号列表的普遍原则是：
+    在process中，其值被引用的信号应当出现在敏感信号列表中
+二选一的选择器：A、B为输入信号；SEL为选路信号；Z为输出信号；
+wait；--无限等待
+       wait on [信号列表]    --等待信号变化
+       wait until [条件]；    --等待条件满足
+       wait for [时间值]；   --等待时间到 
+如果process中没有敏感信号列表，其进程中也没
+有wait 语句，则process中的程序代码循环执行
+process
+     begin
+      clk<=not clk after 50 ns ;
+end process
+Assert语句格式
+信号赋值操作
+2、带条件的信号赋值语句
+3、带选择的信号赋值语句
+
+Block                                                             
+begin
+ with  sel select    
+   q<=ain  when sel=“00”， 
+          bin when sel=“01”，
+          cin  when sel=“10”，
+          din when sel=‘11”
+          xx; when others；                                                                   
+end block    
+顺序执行语句和并行处理语句总结
+1、顺序执行语句 wait、assert、if -else 、case、for-loop、while语句只能用在process、function 和 procedure 中；
+2、并行处理语句（条件信号带入和选择信号带入）只能用在architecture、block中；
+状态机的设计
+一类十分重要的时序电路
+许多数字电路的核心部件
+状态机的结构：
+      A、组合逻辑部分（状态译码器和输出译码器）
+      B、寄存器部分
+各部分的功能
+   1、状态译码器
+         确定状态机的下一个状态
+   2、输出译码器
+         确定状态机输出
+   3、状态寄存器
+         存储状态机的内部状态
+状态的转换
+      下一个状态由译码器根据当前状态和输入条件决定。
+2、输出信号的产生
+       输出信号由译码器根据当前状态和输入条件决定
+同步时序状态机
+    由时钟信号触发状态的转换和信号的输出
+异步时序状态机
+    状态的转移和输出不与时钟信号同步
+两种类型
+1、米里（mealy）状态机---使用输入信号
+
+2、莫尔（moore）状态机---不使用输入信号
+
+编译和仿真工具 
+   OR-CAD或ACTIVE-VHDL
+本次培训采用ACTIVE-VHDL
+ACTIVE-VHDL自带教程
+    目录: ..\Active VHDL\book\Avhdl.htm
 
 
 原型验证过程中的ASIC到FPGA的代码转换2007-10-24 02:40在对ASIC设计进行FPGA原型验证时，由于物理结构不同，ASIC的代码必须进行一定的转换后才能作为FPGA的输入
