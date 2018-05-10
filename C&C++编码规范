@@ -1,0 +1,1838 @@
+原则1.1：对外部输入进行校验
+说明：对于外部输入（包括用户输入、外部接口输入、配置文件、网络数据和环境变量等）可能用于以下场景的情况下，需要检验入参的合法性：
+	输入会改变系统状态
+	输入作为循环条件
+	输入作为数组下标
+	输入作为内存分配的尺寸参数
+	输入作为格式化字符串
+	输入作为业务数据（如作为命令执行参数、拼装sql语句、以特定格式持久化）
+	输入影响代码逻辑
+这些情况下如果不对用户数据作合法性验证，很可能导致DoS、内存越界、格式化字符串漏洞、命令注入、SQL注入、缓冲区溢出、数据破坏等问题。
+对外部输入验证常见有如下几种方式：
+（1）校验输入数据长度：
+如果输入数据是字符串，通过校验输入数据的长度可以加大攻击者实施攻击的难度，从而防止缓冲区溢出、恶意代码注入等漏洞。
+（2）校验输入数据的范围：
+如果输入数据是数值，必须校验数值的范围是否正确，是否合法、在有效值域内，例如在涉及到内存分配、数组操作、循环条件、计算等安全操作时，若没有进行输入数值有效值域的校验，则可能会造成内存分配失败、数组越界、循环异常、计算错误等问题，这可能会被攻击者利用并进行进一步的攻击。
+（3）输入验证前，对数据进行归一化处理以防止字符转义绕过校验：
+通过对输入数据进行归一化处理（规范化，按照常用字符进行编码），彻底去除元字符，可以防止字符转义绕过相应的校验而引起的安全漏洞。
+（4）输入校验应当采用“白名单”形式：
+“黑名单”和“白名单”是进行数据净化的两种途径。“黑名单”尝试排斥无效的输入，而“白名单”则通过定义一个可接受的字符列表，并移除任何不接受的字符来仅仅接受有效的输入。有效输入值列表通常是一个可预知的、定义良好的集合，并且其大小易于管理。
+“白名单”的好处在于，程序员可以确定一个字符串中仅仅包含他认为安全的字符。
+“白名单”比“黑名单”更受推荐的原因是，程序员不必花力气去捕捉所有不可接受的字符，只需确保识别了可接受的字符就可以了。这样一来，程序员就不用绞尽脑汁去考虑攻击者可能尝试哪些字符来绕过检查。
+原则1.2：禁止在日志中保存口令、密钥
+说明：在日志中不能保存口令和密钥，其中的口令包括明文口令和密文口令。对于敏感信息建议采取以下方法，
+	不打印在日志中；
+	若因为特殊原因必须要打印日志，则用“*”代替。
+原则1.3：及时清除存储在可复用资源中的敏感信息
+说明：存储在可复用资源中的敏感信息如果没有正确的清除则很有可能被低权限用户或者攻击者所获取和利用。因此敏感信息在可复用资源中保存应该遵循存储时间最短原则。可复用资源包括以下几个方面：
+	堆（heap）
+	栈（stack）
+	数据段（data segment）
+	数据库的映射缓存
+存储口令、密钥的变量使用完后必须显式覆盖或清空。
+原则1.4：正确使用经过验证的安全的标准加密算法
+说明：禁用私有算法或者弱加密算法（如DES，SHA1等），应该使用经过验证的、安全的、公开的加密算法。
+加密算法分为对称加密算法和非对称加密算法。推荐使用的常用对称加密算法有:
+	AES
+推荐使用的常用非对称算法有:
+	RSA
+	数字签名算法（DSA）
+此外还有验证消息完整性的安全哈希算法（SHA256）等。基于哈希算法的口令安全存储必须加入盐值（salt）。
+密钥长度符合最低安全要求：
+	AES：  128位
+	RSA：  2048位
+	DSA：  1024位
+	SHA：  256位
+原则1.5：遵循最小权限原则
+说明：程序在运行时可能需要不同的权限，但对于某一种权限不需要始终保留。例如，一个网络程序可能需要超级用户权限来捕获原始网络数据包，但是在执行数据报分析等其它任务时，则可能不需要相同的权限。因此程序在运行时只分配能完成其任务的最小权限。过高的权限可能会被攻击者利用并进行进一步的攻击。
+（1）撤销权限时应遵循正确的撤销顺序：
+在涉及到set-user-ID和set-group-ID程序中，当有效的用户ID（user ID）和组ID（group ID）与真实的用户不同时，不但要撤销用户层面（user level）的权限而且要撤销组层面(group level)的权限。在进行这样的操作时，要保证撤销顺序的正确性。
+权限撤销顺序的不正确操作，可能会被攻击者获得过高的权限而进行进一步的攻击。
+（2） 完成权限撤销操作后，应确保权限撤销成功：
+不同平台下所谓的“适当的权限”的意义是不相同的。例如在Solaris中，setuid()的适当的权限指的是PRIV_PROC_SETID权限在进程的有效权限集中。在BSD中意味着有效地用户ID（EUID）为0或者uid=geteuid()。而在Linux中，则是指进程具有CAP_SETUID能力并且当EUID不等于0、真正的用户ID（RUID）或者已保存的set-user ID(SSUID)中任何一个时，setuid(geteuid())是失败的。
+正是由于权限行为的复杂性，所以所需的权限在撤销时可能会失败。这会被攻击者利用并进行进一步的攻击。例如Kernel版本在2.2.0-2.2.15的Linux就有一个权限撤销漏洞，当权限功能位置为0时，setuid(getuid())没有如预期的那样撤销权限成功。因此在进行权限撤销操作后，应该校验以保证权限撤销成功。
+原则1.6：删除或修改没有效果的代码
+说明：删除或修改一些即使执行后、也不会有任何效果的代码。
+一些存在的代码（声明或表达式），即使它被执行后，也不会对代码的结果或数据的状态产生任何的影响，或者产生不是所预期的效果，这样的代码在可能是由于编码错误引起的，往往隐藏着逻辑上的错误。
+原则1.7：删除或修改没有使用到的变量或值
+说明：删除或修改没有使用到的变量或值。一些变量或值存在于代码里，但并没有被使用到，这可能隐含着逻辑上的错误，需要被识别出来，删除这类语句或做相应的修改。
+2	字符串操作安全
+规则2.1：确保有足够的空间存储字符串的字符数据和’\0’结束符
+说明：在分配内存或者在执行字符串复制操作时，除了要保证足够的空间可以容纳字符数据，还要预留’\0’结束符的空间，否则会造成缓冲区溢出。
+错误示例1：拷贝字符串时，源字符串长度可能大于目标数组空间。
+void main(int argc, char *argv[])
+{
+	char dst[128];
+	if （ argc > 1 ）
+	{
+		strcpy(dst, argv[1]);  // 源字符串长度可能大于目标数组空间，造成缓冲区溢出
+	}
+	/*…*/ 
+}
+推荐做法：根据源字符串长度来为目标字符串分配空间。
+void main(int argc, char *argv[])
+{
+	char *dst = NULL;
+	if （ argc > 1 ）
+	{
+		dst = (char *)malloc(strlen(argv[1]) + 1); /* 【修改】确保字符串空间足够容纳argv[1] */
+		if( dst != NULL )
+		{
+			strncpy(dst, argv[1], strlen(argv[1]));
+			dst[strlen(argv[1])] = ’\0’; //【修改】dst以’\0’结尾
+		}
+	}
+	/*...dst使用后free...*/ 
+}
+错误示例2：典型的差一错误，未考虑’\0’结束符写入数组的位置，造成缓冲区溢出和内存改写。
+void NoCompliant()
+{
+	char dst[ARRAY_SIZE + 1];
+	char src[ARRAY_SIZE + 1];
+	unsigned int i = 0;
+	memset(src, '@', sizeof(dst));
+	for(i=0; src[i] != ’\0’ && (i < sizeof(dst)); ++i )
+		dst[i] = src[i];
+	dst[i] = ’\0’; 
+	/*…*/ 
+}
+推荐做法：
+void Compliant()
+{
+	char dst[ARRAY_SIZE + 1];
+	char src[ARRAY_SIZE + 1];
+	unsigned int i = 0;
+	memset(src, '@', sizeof(dst));
+	for(i=0; src[i]!=’\0’ && (i < sizeof(dst) - 1 ); ++i) /*【修改】考虑’\0’结束符 */
+		dst[i] = src[i];
+	dst[i] = ’\0’; 
+	/*…*/ 
+}
+规则2.2：字符串操作过程中确保字符串有’\0’结束符
+说明：字符串结束与否是以’\0’作为标志的。没有正确地使用’\0’结束字符串可能导致字符串操作时发生缓冲区溢出。因此对于字符串或字符数组的定义、设置、复制等操作，要给’\0’预留空间，并保证字符串有’\0’结束符。
+注意：strncpy、strncat等带n版本的字符串操作函数在源字符串长度超出n标识的长度时，会将包括’\0’结束符在内的超长字符串截断，导致’\0’结束符丢失。这时需要手动为目标字符串设置’\0’结束符。
+错误示例1：strlen()不会将’\0’结束符算入长度，配合memcpy使用时会丢失’\0’结束符。
+void  Noncompliant()
+{
+	char dst[11];
+	char src[] = "0123456789";
+	char *tmp = NULL;
+	memset(dst, '@', sizeof(dst)); 
+	memcpy(dst, src, strlen(src));
+	printf("src: %s \r\n", src);
+	tmp = dst;  //到此，dst还没有以’\0’结尾
+	do
+	{
+		putchar(*tmp);
+	}while (*tmp++);    // 访问越界
+	return; 
+}
+推荐做法： 为目标字符串设置’\0’结束符
+void  Compliant()
+{
+	char dst[11];
+	char src[] = "0123456789";
+	char *tmp = NULL;
+	memset(dst, '@', sizeof(dst));
+	memcpy(dst, src, strlen(src));
+	dst[sizeof(dst) - 1] = ’\0’; 	//【修改】dst以’\0’结尾
+	printf("src: %s \r\n", src);
+	tmp = dst;
+	do
+	{
+		putchar(*tmp);
+	} while (*tmp++);
+	return; 
+}
+错误示例2：strncpy()拷贝限长字符串，截断了’\0’结束符。 
+void  Noncompliant()
+{
+	char dst[5];
+	char src[] = "0123456789";
+	strncpy(dst, src, sizeof(dst)); 
+     printf(dst); //访问越界，dst没有’\0’结束符
+	return;
+}
+推荐做法： 
+void  Compliant()
+{
+	char dst[5]; 
+	char src[] = "0123456789";
+	strncpy(dst, src, sizeof(dst));
+	dst[sizeof(dst)-1] = ’\0’;  // 【修改】最后字节置为’\0’
+     printf(dst); 
+	return;
+}
+规则2.3：把数据复制到固定长度的内存前必须检查边界
+说明：将未知长度的数据复制到固定长度的内存空间可能会造成缓冲区溢出，因此在进行复制之前应首先获取并检查数据长度。典型的如来自gets()、getenv()、scanf()的字符串。
+错误示例：输入消息长度不可预测，不加检查的复制会造成缓冲区溢出。
+void  Noncompliant()
+{
+	char dst[16];
+	char * temp = getInputMsg();
+	if(temp != NULL)
+	{
+		strcpy(dst,temp); // temp长度可能超过dst的大小
+	}
+	return; 
+}
+推荐做法： 
+void  Compliant()
+{
+	char dst[16];
+	char *temp = getInputMsg();
+	if(temp != NULL)
+	{
+		strncpy(dst, temp, sizeof(dst)); /* 【修改】只复制不超过数组dst大小的数据 */
+	}
+	dst[sizeof(dst) -1] = ’\0’; //【修改】copy以’\0’结尾
+	return;
+}
+规则2.4：避免字符串/内存操作函数的源指针和目标指针指向内存重叠区
+说明：内存重叠区是指一段确定大小及地址的内存区，该内存区被多个地址指针指向或引用，这些指针介于首地址和尾地址之间。
+在使用像memcpy、strcpy、strncpy、sscanf()、sprintf()、snprintf()和wcstombs()这样的函数时，复制重叠对象会存在未定义的行为，这种行为可能破坏数据的完整性。
+错误示例1：snprintf的参数使用存在问题
+void  Noncompliant()
+{
+#define MAX_LEN 1024
+	char cBuf[MAX_LEN + 1] = {0};
+	int nPid = 0;
+	strncpy(cBuf, ”Hello World!”, strlen(”Hello World!”));
+	snprintf(cBuf, MAX_LEN, "%d: %s", nPid, cBuf); /* cBuf既是源又是目标，函数使用不安全 */
+	return; 
+}
+推荐做法：使用不同源和目标缓冲区来实现复制功能。
+void  Compliant()
+{
+#define MAX_LEN 1024
+	char cBuf[MAX_LEN + 1] = {0};
+	char cDesc[MAX_LEN + 1] = {0}; //【修改】另起一个缓冲区，防止缓冲区重叠出错
+	int nPid = 0;
+	strncpy(cDesc, ”Hello World!”, strlen(”Hello World!”)); /* 【修改】防止缓冲区重叠出错 */
+	snprintf(cBuf, MAX_LEN, "%d: %s", nPid, cDesc); /* 【修改】防止缓冲区重叠出错 */
+	return;
+}
+错误示例2：
+#define MSG_OFFSET 3
+#define MSG_SIZE 6
+void  NoCompliant ()
+{
+	char str[] = "test string";
+	char *ptr1 = str;
+	char *ptr2;
+	ptr2 = ptr1+MSG_OFFSET;
+	memcpy(ptr2, ptr1, MSG_SIZE);
+	return;
+}
+推荐做法：使用memmove函数，源字符串和目标字符串所指内存区域可以重叠，但复制后目标字符串内容会被更改，该函数将返回指向目标字符串的指针。
+#define MSG_OFFSET 3
+#define MSG_SIZE 6
+void  Compliant ()
+{
+	char str[] = "test string";
+	char *ptr1 = str;
+	char *ptr2;
+	ptr2 = ptr1 + MSG_OFFSET;
+	memmove(ptr2, ptr1, MSG_SIZE); /*【修改】使用memmove代替memcpy，防止缓冲区重叠出错 */
+	return;
+}
+memcpy与memmove的目的都是将N个字节的源内存地址的内容拷贝到目标内存地址中。
+但当源内存和目标内存存在重叠时，memcpy会出现错误，而memmove能正确地实施拷贝，但这也增加了一点点开销。
+memmove的处理措施：
+	当源内存的首地址等于目标内存的首地址时，不进行任何拷贝
+	当源内存的首地址大于目标内存的首地址时，实行正向拷贝
+	当源内存的首地址小于目标内存的首地址时，实行反向拷贝
+3	格式化输出安全
+规则3.1：格式化输出函数的格式化参数和实参类型必须匹配
+说明：使用格式化字符串应该小心，确保格式字符和参数在数据类型上的匹配。格式字符和参数之间的不匹配会导致未定义的行为。大多数情况下，不正确的格式化字符串会可能会导致格式化漏洞，使程序异常终止。
+错误示例1：格式字符和参数的类型不匹配
+void  Noncompliant_ArgMismatch()
+{
+	char *error_msg = "Resource not available to user.";
+	int error_type = 3; 
+	/* ...do something... */
+	printf("Error (type %s): %d\n", error_type, error_msg); /*【错误】格式化参数类型不匹配 */
+}
+推荐做法： 
+void  Noncompliant_ArgMismatch()
+{
+	char *error_msg = "Resource not available to user.";
+	int error_type = 3; 
+	/* ...do something... */
+	printf("Error (type %s): %d\n", error_msg, error_type); /*【修改】匹配格式化参数类型 */
+}
+错误示例2：将结构体作为参数
+void  Noncompliant_StructAsArg()
+{
+	struct sParam 
+	{ 
+		int num; 
+		char msg[100]; 
+		int result; 
+	}; 
+	struct sParam tmp = {10, "hello Baby!", 0}; 
+	char *errormsg = "Resource not available to user."; 
+	int errortype = 3;
+	/* ...do something... */
+	if (tmp.result == 0) 
+	{ 
+		printf("Error Param: %s \n", tmp); /*【错误】不能将整个结构体作为格式化参数 */
+	}  
+}
+推荐做法： 
+void  Noncompliant_StructAsArg()
+{
+	struct sParam 
+	{ 
+		int num; 
+		char msg[100]; 
+		int result; 
+	}; 
+	struct sParam tmp = {10, "hello Baby!", 0}; 
+	char *errormsg = "Resource not available to user."; 
+	int errortype = 3;
+	/* ...do something... */
+	if (tmp.result == 0) 
+	{ 
+		printf("Error Param:num=%d, msg=%s, result=%d\n", tmp.num, tmp.msg, tmp.result);  //【修改】将结构体的内部变量作为格式化参数 
+	}  
+}
+规则3.2：格式化输出函数的格式化参数和实参个数必须匹配
+说明：使用格式化字符串应该小心，确保格式字符和参数在数量上的匹配。格式字符和参数之间的不匹配会导致未定义的行为。大多数情况下，不正确的格式化字符串会导致程序异常终止。
+错误示例：格式字符和参数的数量不匹配，格式化字符串在编码时会大量使用，如拼装SQL语句和拼装调试信息。尤其是调试信息，量大时容易copy-paste省事，这就容易出现不匹配的错误。
+void  Noncompliant()
+{
+	char *error_msg = "Resource not available to user.";
+	/* ...do something... */
+	printf("Error (type %s)\n");    //【错误】格式化参数个数不匹配
+}
+推荐做法：
+void  Compliant()
+{
+	char *error_msg = "Resource not available to user.";
+	/* ...do something... */
+	printf("Error (type %s)\n", error_msg); //【修改】使格式化参数个数匹配
+}
+规则3.3：禁止以用户输入来构造格式化字符串
+说明：调用格式化I/O函数时，不要直接或者间接将用户输入作为格式化字符串的一部分或者全部。如果攻击者对一个格式化字符串可以部分或完全控制，将导致进程崩溃、查看栈的内容、改写内存、甚至执行任意代码等风险。
+错误示例:下列代码直接将用户输入作为格式字符串输出。
+void Noncompliant(char *user, char *password) 
+{
+    char input[1000];
+    if (fgets(input, sizeof(input) - 1, stdin) == NULL) 
+    {
+        /* handle error */
+    }
+    input[sizeof(input)-1] = ’\0’;
+    printf(input); //【错误】不允许将用户输入直接作为格式字符串
+}
+示例代码的input直接来自用户输入，并作为格式化字符串直接传递给printf()。当用户输入的是“%s%s%s%s%s%s%s%s%s%s%s%s”，就可能触发无效指针或未映射的地址读取。格式字符%s显示栈上相应参数所指定的地址的内存。这里input被当成格式化字符串，而没有提供参数，因此printf()读取栈中任意内存位置，直到格式字符耗尽或者遇到一个无效指针或未映射地址为止。
+推荐做法：通过显式参数”%s”将 printf()的格式化字符串确定下来。
+void Compliant(char *user, char *password) 
+{
+    char input[1000];
+    if (fgets(input, sizeof(input)-1, stdin) == NULL) 
+    {
+        /* handle error */
+    }
+    input[sizeof(input)-1] = ’\0’;
+    printf(“%s”, input);  //【修改】通过%s将格式字符串确定下来
+}
+建议3.1：使用格式化函数时推荐使用精度说明符
+说明：使用格式化函数时（例如sprintf(),scanf_s()等），可能会含有字符串参数，应尽量为格式化指示符加上精度说明符以限制拷贝字符串的长度，防止缓冲区溢出漏洞。
+错误示例：使用格式化函数sprintf，没有添加精度说明符，可能会导致缓冲区溢出。
+#define BUF_SIZE 128
+void NoCompliant()
+{
+	char buffer[BUF_SIZE + 1];
+	sprintf( buffer, "Usage: %s argument\n", argv[0] );
+	/* ...do something... */
+}
+推荐做法：优先采用snprintf替代sprintf来防止缓冲区溢出。若没有带n版本的snprintf函数，可参考如下示例，使用sprintf，在接收字符串时，加上精度说明符，确定接收的长度，以免造成缓冲区溢出。
+#define BUF_SIZE 128
+void Compliant()
+{
+	char buffer[BUF_SIZE + 1];
+	sprintf(buffer, "Usage: %.100s argument\n", argv[0]); /*【修改】字符串加上精度说明符 */
+	/* ...do something... */
+}
+通过精度限制从argv[0] 中只能拷贝 100 个字节。
+4	整数安全
+C99标准定义了整型提升（integer promotions）、整型转换级别（integer conversion rank）以及普通算术转换（usual arithmetic conversions）的整型操作。不过这些操作实际上也带来了安全风险。
+规则4.1：确保无符号整数运算时不会出现反转
+说明：反转是指无法用无符号整数表示的运算结果将会根据该类型可以表示的最大值加1执行求模操作。将运算结果用于以下之一的用途，应防止反转：
+	作为数组索引
+	指针运算
+	作为对象的长度或者大小
+	作为数组的边界
+	作为内存分配函数的实参
+错误示例：下列代码可能导致相加操作产生无符号数反转现象。
+INT32 NoCompliant(UINT32 ui1, UINT32 ui2, UINT32 * ret)
+{
+	if( NULL == ret )
+	{
+		return ERROR;
+	}
+	*ret = ui1 + ui2;
+	/*上面的代码可能会导致ui1加ui2产生无符号数反转现象,譬如ui1 = UINT_MAX且ui2 = 2;这可能会导致后面的内存分配数量不足或者产生易被利用的潜在风险；*/
+	return (OK);
+}
+推荐做法：
+INT32 Compliant(UINT32 ui1, UINT32 ui2, UINT32 * ret)
+{
+	if( NULL == ret )
+	{
+		return ERROR;
+	}
+	if((UINT_MAX - ui1) < ui2) //【修改】确保无符号整数运算时不会出现反转
+	{
+		return ERROR;
+	}
+	else
+	{
+		*ret = ui1+ ui2;
+	}
+	return OK;
+}
+延伸阅读材料：漏洞VU#551436就是因为反转问题，导致分配内存空间不足，引发堆溢出。
+规则4.2：确保有符号整数运算时不会出现溢出
+说明：整数溢出是是一种未定义的行为，意味着编译器在处理有符号整数溢出时具有很多选择。将运算结果用于以下之一的用途，应防止溢出：
+	作为数组索引
+	指针运算
+	作为对象的长度或者大小
+	作为数组的边界
+	作为内存分配函数的实参
+错误示例：下列代码中两个有符号整数相乘可能会产生溢出。
+INT32 NoCompliant(INT32 si1, INT32 si2, INT32 *ret)
+{
+	if ( NULL == ret )
+	{
+		return ERROR;
+	}
+	*ret = si1 * si2;
+	/* 上面的代码可能会产生两个有符号整数相乘可能会产生溢出,譬如si1 = INT_MAX且si2 非0;*/
+	return OK;
+}
+推荐做法：
+INT32 Compliant(INT32 si1, INT32 si2, INT32 *ret)
+{
+	if ( NULL == ret )
+	{
+		return ERROR;
+	}
+	INT64 tmp = (INT64)si1 *(INT64)si2; /*【修改】确保有符号整数运算时不会出现溢出 */
+	if((INT_MAX < tmp) || (INT_MIN > tmp))
+	{
+		return ERROR;
+	}
+	*ret = si1 * si2;
+	return OK;
+}
+延伸阅读材料：整数溢出可能导致缓冲区溢出以及任意代码执行。Apple Mac OS X 10.3及以前版本在处理GIF文件时，存在整数溢出漏洞，可被利用执行任意代码。攻击者可以将特定的GIF文件放在Web页面或者邮件附件中，诱使目标打开此文件从而触发利用。具体可参考US-CERT披露的漏洞VU#559444。
+规则4.3：确保整型转换时不会出现截断错误
+说明: 将一个较大整型转换为较小整型，并且该数的原值超出较小类型的表示范围，就会发生截断错误，原值的低位被保留而高位被丢弃。截断错误会引起数据丢失，甚至可能引发安全问题。特别是将运算结果用于以下用途：
+	作为数组索引
+	指针运算
+	作为对象的长度或者大小
+	作为数组的边界（如作为循环计数器）
+错误示例：数据类型强制转化导致数据被截断。
+INT32  NoCompliant(UINT32 ui, INT8 *ret)
+{
+	if( NULL == ret )
+	{
+		return ERROR;
+	}
+	*ret = (INT8)ui;
+	/*上面的代码会导致数据被截断,譬如ui = UINT_MAX场景下*/
+	return (OK);      
+}
+推荐做法：
+INT32  Compliant(UINT32 ui, INT8 *ret)
+{
+	if(NULL == ret)
+	{
+		return ERROR;
+	}
+	if(SCHAR_MAX >= ui) //【修改】确保整型转换时不会出现截断
+	{
+		*ret = (INT8)ui;
+	}
+	else
+	{
+		return ERROR;
+	}    
+	return OK; 
+}
+规则4.4：确保整型转换时不会出现符号错误
+说明: 有时从带符号整型转换到无符号整型会发生符号错误，符号错误并不丢失数据，但数据失去了原来的含义。
+带符号整型转换到无符号整型，最高位（high-order bit）会丧失其作为符号位的功能。如果该带符号整数的值非负，那么转换后值不变；如果该带符号整数的值为负，那么转换后的结果通常是一个非常大的正数。
+错误示例：符号错误绕过长度检查
+#define BUF_SIZE 10
+int main(int argc, char* argv[])
+{
+	int	length;
+	char buf[BUF_SIZE];
+	if (argc != 3)
+	{
+		return -1;
+	}
+	length = atoi(argv[1]); //【错误】atoi返回值可能为负数
+	if (length < BUF_SIZE)  // len为负数，长度检查无效
+	{
+		memcpy(buf, argv[2], length); /* 带符号的len被转换为size_t类型的无符号整数，负值被解释为一个极大的正整数。memcpy()调用时引发buf缓冲区溢出*/
+		printf("Data copied\n");
+	}
+	else
+	{
+		printf("Too many data\n");
+	}
+}
+推荐做法1：将length声明为无符号整型，这样符号错误后产生的极大正整数可以在与BUF_SIZE比较时检查出来；
+推荐做法2：在长度检查时，除了要保证长度小于BUF_SIZE，还要保证长度大于0。
+规则4.5：把整型表达式比较或赋值为一种更大类型之前必须用这种更大类型对它进行求值
+说明：若一个整型表达式与一个很大长度的整数类型进行比较或者赋值为这种类型的变量，需要对该整型表达式的其中一个操作数类型显示转换为更大长度的整数类型，用这种更大的进行求值。这里所说的更大整数类型是相对整型表达式的操作数类型而言，譬如整型表达式的操作数类型是unsigned int ,则该规则所说的更大类型是指 unsigned long long。
+错误示例：数据类型不一致导致整型表达式赋值错误。
+void *NoCompliant(UINT32 blockNum)
+{
+	if(0 == blockNum )
+	{
+		return NULL;
+	}
+	UINT64 alloc = blockNum * 16;
+	/*blockNum为32位的无符号数，两个32位的数相乘仍为32位的数，这会导致
+	alloc <= UNIT_MAX始终为TRUE.*/
+	return (alloc <= UINT_MAX)?malloc(blockNum*16):NULL;
+}
+	/*...申请的内存使用后free...*/ 
+推荐做法：
+void *Compliant(UINT32 blockNum)
+{
+	if(0 == blockNum )
+	{
+		return NULL;
+	}
+	UINT64 alloc = (UINT64)blockNum * 16; /*【修改】确保整型表达式转换时不出现数值错误 */
+	return (alloc <= UINT_MAX)?malloc(blockNum*16):NULL;
+}
+	/*...申请的内存使用后free...*/ 
+建议4.1：避免对有符号整数进行位操作符运算
+说明：位操作符（～、>>、<<、&、^、|)应该只用于无符号整型操作数，因为有符号整数上的有些位操作的结果是由编译器所决定的，可能会出现出乎意料的行为或编译器定义的行为。 
+错误示例：对有符号数作位操作运算。
+#define BUF_LEN (4)
+INT32 NoCompliant(void)
+{
+	INT32 ret = 0;
+	INT32 i = 0x8000000; //【不推荐】避免使用有符号数作位操作符运算
+	INT8 buf[BUF_LEN];
+	memset(buf,0,BUF_LEN);
+	ret = snprintf(buf, BUF_LEN, "%u", i >> 24); 
+	/* i >> 24的结果是0xFFFFFFF8(10进制4294967288),导致转换为
+	一个字符串时，长度超过BUF_LEN，无法存储在buf中，因此被snprintf截
+	断；若是采用sprintf，	这个例子就会产生缓冲区溢出*/
+	if(-1 == ret || BUF_LEN <= ret)
+	{
+		return ERROR;
+	}
+	return OK;
+} 
+推荐做法：
+#define BUF_LEN (4)
+INT32 Compliant(void)
+{
+	INT32 ret = 0;
+	UINT32 i = 0x8000000;//【修改】使用无符号代替有符号数作位操作符运算
+	INT8 buf[BUF_LEN];
+	memset(buf, 0, BUF_LEN);
+	ret = snprintf(buf, 4, "%u", i >> 24);
+	if(-1 == ret || BUF_LEN <= ret)
+	{
+		return ERROR;
+	}
+	return OK;
+} 
+5	内存管理安全
+规则5.1：禁止引用未初始化的内存
+说明：有些函数如malloc分配出来的内存是没有初始化的，可以使用memset进行清零，或者使用calloc进行内存分配，calloc分配的内存是清零的。当然，如果后面需要对申请的内存进行全部赋值，就不要清零了，但要确保内存被引用前是被初始化的。此外，分配内存初始化，可以消除之前可能存放在内存中的敏感信息，避免敏感信息的泄露。
+错误示例：如下代码没有对malloc的y内存进行初始化，所以功能不正确。
+/* return y = Ax */
+int * Noncompliant(int **A, int *x, int n)
+{
+	if(n <= 0)
+		return NULL;
+	int *y = (int*)malloc (n * sizeof (int));
+	if(y == NULL)
+		return NULL;
+	int i, j;
+	for (i = 0; i < n; ++i)
+	{
+		for (j = 0; j < n; ++j)
+		{
+			y[i] += A[i][j] * x[j];
+		}
+	}
+	return y;
+}
+/*...申请的内存使用后free...*/ 
+推荐做法：使用memset对分配出来的内存清零。
+int * Compliant(int **A, int *x, int n)
+{
+	if(n <= 0)
+		return NULL;
+	int *y = (int*)malloc(n * sizeof (int));
+	if(y == NULL)
+		return NULL;
+	int i, j;
+	memset (y, 0, n * sizeof(int)); //【修改】确保内存被初始化后才被引用
+	for (i = 0; i < n; ++i)
+	{
+		for (j = 0; j < n; ++j)
+		{
+			y[i] += A[i][j] * x[j];
+		}
+	}
+	return y;
+}
+/*...申请的内存使用后free...*/ 
+延伸阅读材料：参见《C和C++安全编码》（机械工业出版社出版，作者Robert C.Seacord）第4章的tar命令的漏洞。这个漏洞没有初始化分配的内存，导致敏感的密码泄露。
+规则5.2：禁止访问已经释放的内存
+说明：访问已经释放的内存，是很危险的行为，主要分为两种情况：
+（1）堆内存：一块内存释放了，归还内存池以后，就不应该再访问。因为这块内存可能已经被其他部分代码申请走，内容可能已经被修改；直接修改释放的内存，可能会导致其他使用该内存的功能不正常；读也不能保证数据就是释放之前写入的值。在一定的情况下，可以被利用执行恶意的代码。即使是对空指针的解引用，也可能导致任意代码执行漏洞。如果黑客事先对内存0地址内容进行恶意的构造，解引用后会指向黑客指定的地址，执行任意代码。
+（2）栈内存：在函数执行时，函数内局部变量的存储单元都可以在栈上创建，函数执行完毕结束时这些存储单元自动释放。如果返回这些已释放的存储单元的地址（栈地址），可能导致程序崩溃或恶意代码被利用。
+错误示例1：解引用一个已经释放了内存的指针，会导致未定义的行为。
+typedef struct _tagNode
+{
+	int	value;
+	struct _tagNode * next;
+}Node;
+Node *  Noncompliant()
+{
+	Node * head = (Node *)malloc(Node);
+	if (head==NULL)
+	{
+		/* ...do something... */
+		return NULL;
+	}
+	/* ...do something... */
+	free(head);
+	/* ...do something... */
+	head->next = NULL;  //【错误】解引用了已经释放的内存
+	return head;
+}
+错误示例2：函数中返回的局部变量数据有可能会被覆盖掉，导致未定义的行为。
+char *  Noncompliant()
+{
+	char msg[128];
+	/* ...do something... */
+	return msg;  //【错误】返回了局部变量
+}
+延伸阅读材料：参考《C和C++安全编码》4.3.4章节 写入释放的内存部分。其中描述了利用该错误执行恶意代码的过程。
+Bugtraq ID: 36038披露了Linux内核的一个空指针解引用漏洞，可以被成功利用提升本地权限。
+规则5.3：禁止重复释放内存
+说明：重复释放内存（double-free）会导致内存管理器出现问题。重复释放内存在一定情况下，有可能导致“堆溢出”漏洞，可以被用来执行恶意代码，具有很大的安全隐患。
+错误示例：如下代码两次释放了ptr。
+void  Noncompliant()
+{
+	char *ptr = (char*)malloc(size);
+	if (ptr)
+	{
+		/* ...do something... */
+		free(ptr);
+	}
+	/* ...do something... */
+	free(ptr); //【错误】有可能出现2次释放内存的错误
+}
+推荐做法：申请的内存应该只释放一次。
+void  Compliant()
+{
+	char *ptr = (char*)malloc(size);
+	if (ptr)
+	{
+		/* ...do something... */
+		free(ptr);
+		ptr = NULL;
+	} 
+	/* ...do something... */
+	//【修改】删掉free(ptr)
+}
+延伸阅读材料：微软安全公告MS04-011和MS04-025都是因为double-free问题导致远程代码执行漏洞，漏洞级别都是“严重”。
+规则5.4：必须对指定申请内存大小的整数值进行合法性校验
+说明：申请内存时没有对指定的内存大小整数作合法性校验，会导致未定义的行为，主要分为两种情况：
+（1）使用 0 字节长度去申请内存的行为是没有定义的，在引用内存申请函数返回的地址时会引发不可预知或不能立即发现的问题。对于可能出现申请0地址的情况，需要增加必要的判断，避免出现这种情况
+（2）使用负数长度去申请内存，负数会被当成一个很大的无符号整数，从而导致因申请内存过大而出现失败，造成拒绝服务。
+错误示例：下列代码进行内存分配时，没有对内存大小整数作合法性校验。
+int * Noncompliant(int x)
+{
+	int i;
+	int * y = (int *)malloc( x * sizeof(int));  //未对x进行合法性校验
+	for(i=0; i<x; ++i)
+	{
+		y[i] = i;
+	}
+	return y;
+}
+/*...申请的内存使用后free...*/ 
+推荐做法：调用malloc之前，需要判断malloc的参数是否合法。确保x为整数后才申请内存，否则视为参数无效，不予申请，以避免出现申请过大内存而导致拒绝服务。
+int * Compliant(int x)
+{
+	int i;
+	int *y;
+	if(x > 0)   //【修改】增加对x进行合法性校验
+	{
+		y = (int *)malloc( x * sizeof(int));
+		if (y == NULL)
+			return NULL;
+	}
+	else
+	{
+		return NULL;
+	}
+	for(i=0; i<x; ++i)
+	{
+		y[i]=i;
+	}
+	return y;
+}
+/*...申请的内存使用后free...*/ 
+规则5.5：禁止释放非动态申请的内存
+说明：非动态申请的内存并不是由内存分配器管理的，如果使用free函数对这块内存进行释放，会对内存分配器产生影响，造成拒绝服务。如果黑客能控制非动态申请的内存内容，并对其进行精心的构造，甚至导致程序执行任意代码。
+错误示例：非法释放非动态申请的内存。
+void  Noncompliant()
+{
+	char str[] = "this is a string";
+	/* ...do something... */
+	free(str);    //【错误】str不是动态申请的内存，因此不能释放
+}
+推荐做法：非动态分配的内存不需要释放，把原来释放函数free()去掉。
+void  Compliant ()
+{
+	char str[] = "this is a string";
+	/* ...do something... */
+	//【修改】删除free(str)
+}
+建议5.1：避免使用alloca函数申请内存
+说明：POSIX和C99 均未定义 alloca 的行为，在不支持的平台上运行会有未定义的后果，且该函数在栈帧里申请内存，申请的大小可能越过栈的边界而无法预知。
+错误示例：使用了alloca从堆栈分配内存
+void  Noncompliant(char *buff, int len)
+{
+	int size = len * 3 + 1, i;
+	char *ptr = alloca (size), *p; //【不推荐】避免使用alloca函数申请内存
+	if (len <= 0)
+		return;
+	if (ptr == NULL)
+		return;
+	p = ptr;
+	for (i = 0; i < len; ++i)
+	{
+		p += _snprintf(p, 4, "%02x ", buff[i]);
+	}
+	*p = NULL;
+	printf ("%s", ptr);
+}
+推荐做法：alloca函数返回后，使用指向函数局部堆栈内存区也会出现问题，改用malloc从堆分配内存。
+void  Compliant(char *buff, int len)
+{
+	int size = len * 3 + 1, i;
+	char *ptr = malloc(size), *p; //【修改】使用malloc代替alloca申请内存
+	if (len <= 0)
+		return;
+	if (ptr == NULL)
+		return;
+	p = ptr;
+	for (i = 0; i < len; ++i)
+	{
+		p += _snprintf (p, 4, "%02x ", buff[i]);
+	}
+	*p = NULL;
+	printf ("%s", ptr);
+	free (ptr);
+}
+6	禁用不安全函数或对象
+规则6.1：禁止使用未显式指明目标缓冲区大小的字符串操作函数
+说明：C标准的系列字符串处理函数，不检查目标缓冲区的大小，容易引入缓冲区溢出的安全漏洞。
+	字符串拷贝函数：strcpy, wcscpy
+	字符串拼接函数：strcat, wcscat
+	字符串格式化输出函数：sprintf, swprintf, vsprintf, vswprintf, 
+	字符串格式化输入函数：scanf, wscanf, sscanf, swscanf, fscanf, vfscanf, vscanf, vsscanf
+	stdin流输入函数：gets
+这类函数是公认的危险函数，应禁止使用此类函数（微软从Windows Vista的开发开始就全面禁用了危险API）。
+最优选择：使用ISO/IEC TR 24731-1定义的字符串操作函数的安全版本，如strcpy_s、strcat_s()、sprintf_s()、scanf_s()、gets_s() 等。这个版本的函数增加了以下安全检查：
+	检查源指针和目标指针是否为NULL；
+	检查目标缓冲区的最大长度是否小于源字符串的长度；
+	检查复制的源和目的对象是否重叠。
+缺点是，编译器对TR 24731的支持还不普遍。
+次优选择：如果编译器还未支持TR 24731，可以使用带n的替代函数，如strncpy/strncat/snprintf。需要注意的是，带n版本的函数会截断超出长度限制的字符串，包括源字符串结尾的’\0’。这就很可能导致目标字符串以非’\0’结束。字符串缺少’\0’结束符，同样导致缓冲区溢出和其它未定义行为。需要程序员保证目标字符串以’\0’结束，所以带n版本的函数也还是存在一定风险。
+如果编译器不支持TR 24731-1，同时产品对性能比较敏感，建议由相应软件平台实现安全版本的字符串操作函数。如VRP提供了VOS_xxx_safe版本的安全函数，推荐基于VRP的产品使用。
+错误示例：使用不安全的函数。
+void NoComplain(const char *msg) 
+{
+	if (msg != NULL)
+	{
+		static const char prefix[] = "Error: ";
+		static const char suffix[] = "\n";
+		char buf[BUFSIZ];
+		strcpy(buf, prefix);  //【错误】避免使用strcpy
+		strcat(buf, msg);     //【错误】避免使用strcat
+		strcat(buf, suffix);  //【错误】避免使用strcat
+		fputs(buf, stderr);
+	}
+}
+示例代码中，buf长度是固定的BUFSIZ，msg的长度是不确定的，在msg太大时会发生缓冲区溢出。
+推荐做法：使用带长度参数版本的函数或者自行实现安全版本，往目标缓冲区中复制指定长度的字符，截断超出限制的字符。
+void Complain(const char *msg) 
+{
+	if (msg != NULL)
+	{
+		static const char prefix[] = "Error: ";
+		static const char suffix[] = "\n";
+		char buf[BUFSIZ];
+		strncpy(buf, prefix, sizeof(buf)-1); //【修改】使用strncpy代替strcpy
+		strncat(buf, msg, sizeof(buf)-strlen(buf)-1); /*【修改】使用strncat代替strcat */
+		strncat(buf, suffix, sizeof(buf)-strlen(buf)-1); /* 【修改】使用strncat代替strcat */
+		fputs(buf, stderr);
+	}
+}
+延伸阅读材料：微软禁用了更多的危险API，参考以下链接：
+http://msdn.microsoft.com/en-us/library/bb288454.aspx
+规则6.2：禁止调用OS命令解析器执行命令或运行程序，防止命令注入
+说明：命令解析器（如UNIX的shell，Windows的CMD.exe）支持命令分隔符（”&&”、”||”、”&”、”;”），用于连续执行多个命令/程序。这是产生命令注入漏洞的根本原因。
+C99函数system()的实现正是通过调用命令解析器来执行入参指定的程序/命令。类似的还有POSIX的函数popen()。如果system()/popen()的参数由用户的输入组成，恶意用户可以通过构造恶意输入,改变函数调用的行为。
+除非入参是硬编码的，否则禁止使用system()和popen()。替代方案是POSIX的exec系列函数或Win32 API CreateProcess()等与命令解释器无关的进程创建函数来替代。
+错误示例：
+system(sprintf("any_exe %s", input)); //【错误】参数不是硬编码，禁止使用system
+这行代码是需要执行一个名为any_exe的程序，程序参数来自用户的输入input。这种情况下，恶意用户输入参数：
+happy; useradd attacker
+最终shell将字符串”any_exe happy; useradd attacker”解释为两条独立的命令连续执行：
+any_exe happy
+useradd attacker
+这样攻击者通过注入了一条命令”useradd attacker”创建了一个新用户。这明显不是程序所希望的。
+推荐做法：使用命令解释器无关的函数，如execve()。
+void secuExec(char *input) 
+{
+	pid_t pid;
+	char *const args[] = {"", input, NULL};
+	char *const envs[] = {NULL};
+	pid = fork();
+	if (pid == -1) 
+	{
+		puts("fork error");
+	}
+	else if (pid == 0)
+	{
+		if (execve("/usr/bin/any_exe", args, envs) == -1) /*【修改】使用execve代替system */
+		{
+			puts("Error executing any_exe");
+		}
+	}
+	return;
+}    
+对于使用execve()等进程创建函数，要避免创建命令解释器的进程；如果确实需要使用命令解释器，应保证传给新进程的命令行参数不包含命令分隔符。
+延伸阅读材料：CVE-2007-2447披露了SAMBA的一个匿名远程命令注入漏洞。
+规则6.3：禁止使用std::ostrstream，推荐使用std::ostringstream
+说明： std::ostrstream的使用上需要特别注意几点：
+（1）str() 会调用成员函数freeze(),它会冻结字符序列，当缓冲区不够大以至于需要分配新缓冲区时，这么做可以避免事情变得复杂。
+（2）str()不会附加字符串终止符号（’\0’）。
+（3）data()返回所有字符串，没有附带’\0’结尾字符（目前有些编译器自动调用c_str方法了）。
+上面如果不注意，就可能会导致内存访问越界、缓冲区溢出等问题，所以建议不要使用ostrstream。[C++03]标准将std::strstream标明为deprecated，替代方案是std::stringstream。ostringstream没有上述问题。
+错误示例：下列代码使用了std::ostrstream，可能会导致内存访问越界等问题。
+void NoCompliant()
+{
+	std::ostrstream mystr; //【错误】不要使用std::ostrstream
+	mystr << "hello world";
+	// ostream.str方法返回的指针，没有空结束符，容易造成问题
+	char *p = mystr.str();
+	std::cout << mystr.str() << std::endl;
+}
+规则6.4：C++中，必须使用C++标准库替代C的字符串操作函数
+说明：C标准的系列字符串处理函数strcpy/strcat/sprintf/scanf/gets，不检查目标缓冲区的大小，容易引入缓冲区溢出的安全漏洞。
+C++标准库提供了字符串类抽象的一个公共实现std::string，支持字符串的常规操作：
+	字符串拷贝
+	读写访问单个字符
+	字符串比较
+	字符串连接
+	字符串长度查询
+	字符串是否为空的判断。
+在C++程序中，尽可能使用std::string、std::ostringstream等替代不安全的C字符串操作函数。
+错误示例：使用了C风格的字符串操作函数。
+void NoCompliant(const char *msg) 
+{
+	if (msg != NULL)
+	{
+		static const char prefix[] = "Error: ";
+		static const char suffix[] = "\n";
+		char buf[BUFSIZ];
+		strcpy(buf, prefix); //【错误】C++中，不要使用C风格的字符串操作函数
+		strcat(buf, msg);     //【错误】C++中，不要使用C风格的字符串操作函数
+		strcat(buf, suffix); //【错误】C++中，不要使用C风格的字符串操作函数
+		fputs(buf, stderr);
+	}
+}
+推荐做法：
+void Compliant(const char *msg) 
+{
+	if (msg != NULL)
+	{
+		std::string buf = "Error: ";
+		buf += msg;   //【修改】使用C++标准库代替C风格的字符串操作函数
+		std::cout << buf << std::endl;
+	}
+}
+7	文件输入/输出安全
+规则7.1：必须使用int类型来接收字符输入/输出函数的返回值 
+说明：字符输入/输出函数fgetc()、getc()和getchar()都从一个流读取一个字符，并把它以int值的形式返回。如果这个流到达了文件尾或者发生读取错误，函数返回EOF。fputc()、putc()、putchar()和ungetc()也返回一个字符或EOF。
+如果这些I/O函数的返回值需要与EOF进行比较，不要将返回值转换为char类型。因为char是有符号8位的值，int是32位的值。如果getchar()返回的字符的ASCII值为0xFF，转换为char类型后将被解释为EOF。0xFF这个值被有符号扩展后是0xFFFFFFFF，刚好等于EOF的值。
+错误示例：下列代码使用char类型来接收字符I/O的返回值，可能会导致返回值错误。
+void  Noncompliant()
+{
+	char buf[BUFSIZ];
+	char c; //【错误】不要使用char类型来接收字符I/O的返回值
+	int i = 0;
+	while ((c = getchar()) != '\n' && c != EOF) 
+	{
+		if (i < BUFSIZ-1) 
+		{
+			buf[++i] = c;
+		}
+	}
+	buf[i] = ’\0’; /* terminate NTBS */
+}
+推荐做法：
+void  Compliant ()
+{
+	char buf[BUFSIZ];
+	int c;  //【修改】使用int类型来接收字符I/O的返回值
+	int i = 0;
+	while (((c = getchar()) != '\n') && c != EOF) /*【修改】int类型才能接收到EOF */
+	{
+		if (i < BUFSIZ-1) 
+		{
+			buf[++i] = c;
+		}
+	}
+	buf[i] = ’\0’; /* terminate NTBS */
+}
+注意：对于sizeof(int) == sizeof(char)的平台，用int接收返回值也可能无法与EOF区分，这时要用feof()和ferror()检测文件尾和文件错误。
+规则7.2：创建文件时必须显式指定合适的文件访问权限 
+说明：创建文件时，如果不显式指定合适访问权限，可能会让未经授权的用户访问该文件。访问权限依赖于文件系统，但一般文件系统都会提供控制访问权限的功能。
+错误示例：下列代码没有显式配置文件的访问权限。
+void  Noncompliant()
+{
+	char *file_name;
+	int fd;
+	/* initialize file_name */
+	fd = open(file_name, O_CREAT | O_WRONLY); 
+	/* access permissions were missing */
+	if (fd == -1)
+	{
+		/* Handle error */
+	}
+}
+推荐做法：
+void  Compliant()
+{
+	char *file_name;
+	int file_access_permissions = S_IRUSR|S_IWUSR;
+	/* initialize file_name and file_access_permissions */
+	int fd = open(
+		file_name,
+		O_CREAT | O_WRONLY,
+		file_access_permissions  //【修改】显式配置访问权限。
+		);
+	if (fd == -1)
+	{
+		/* Handle error */
+	}
+}
+规则7.3：文件路径验证前，必须对其进行标准化
+说明：当文件路径来自非信任域时，需要先将文件路径规范化再做校验。路径在验证时会有很多干扰因素，如相对路径与绝对路径，如文件的符号链接、硬链接、快捷路径、别名等。
+所以在验证路径时需要对路径进行标准化，使得路径表达唯一化、无歧义。
+如果没有作标准化处理，攻击者就有机会：
+（1）构造一个跨越目录限制的文件路径，例如“../../../etc/passwd”或“../../../boot.ini”
+（2）构造指向系统关键文件的链接文件,例如symlink("/etc/shadow","/tmp/log")
+通过上述两种方式之一可以实现读取或修改系统重要数据文件，威胁系统安全。
+推荐做法： 
+Linux下对文件进行标准化，可以防止黑客通过构造指向系统关键文件的链接文件。realpath() 函数返回绝对路径，删除了所有符号链接：
+void  Compliant(char *lpInputPath)
+{
+	char realpath[MAX_PATH];
+	if ( realpath(inputPath, realpath) == NULL)
+		/* handle error */;
+	/*... do something ...*/
+}
+Windows下可以使用PathCanonicalize函数对文件路径进行标准化：
+void  Compliant(char *lpInputPath)
+{
+	char realpath[MAX_PATH];
+	char *lpRealPath = realpath;
+	if ( PathCanonicalize(lpRealPath,lpInputPath) == NULL)
+		/* handle error */;
+	/*... do something ...*/
+}
+延伸阅读材料：CVE-2012-5335披露了开源HTTP服务器Tiny Server存在目录遍历漏洞，可以允许攻击者通过提交恶意URL（如http://192.168.1.2/../../windows/system.ini）来查看HTTP Server的任意物理目录。
+建议7.1：访问文件时尽量使用文件描述符代替文件名作为输入，以避免竞争条件问题
+说明：该建议应用场景如下，当对文件的元信息进行操作时（比如修改它的所有者、对文件进行统计，或者修改它的权限位），首先要打开该文件，然后对打开的文件进行操作。只要有可能，应尽量避免使用获取文件名的操作，而是使用获取文件描述符的操作。这样做将避免文件在程序运行时被替换（一种可能的竞争条件）。
+例如，当access()和open()两者都利用一个字符串参数而不是一个文件句柄来进行相关操作时，攻击者就可以通过在access()和open()之间的间隙替换掉原来的文件，如下所示：
+行式打印	攻击者
+access(”/tmp/attack”)	
+	unlink(”/tmp/attack”)
+	symlink(”/etc/shadow”, ”/tmp/attack”)
+open(”/tmp/attack”)	
+错误示例：下列代码使用access()函数，可能引发竞争条件问题。
+void  Noncompliant(char * file)
+{
+	if(!access(file, W_OK))     //【不推荐】不要使用函数access(),易引发条件竞争
+	{
+		f = fopen(file, "w+");
+		/*...*/
+		/* close f after operate(f)*/
+	}
+	else 
+	{
+		fprintf(stderr, "Unable to open file %s.\n", file);
+	}
+}
+8	STL库安全
+STL(Standard Template Library标准模板库)是C++开发中的常用组件，它通过容器+迭代子+算法的灵活组合，可以满足很多应用场景，但使用不好则易留下安全隐患。
+规则8.1：引用容器前后元素时要确保容器元素存在
+说明：没有判断是否为空就直接通过引用STL容器首尾元素，这在容器为空时会导致程序异常。
+错误示例：
+bool NoCompliant(const NodeKeyList &srcList, const NodeKeyList &snkList)
+{
+	NodeKey srcNode = srcList.front();
+	NodeKey snkNode = snkList.back();
+	/* ...do something... */
+}
+示例代码对函数的入参srcList没有判断长度直接通过front()和back()方法取了第一个和最后一个元素，在容器列表为空的情况下，会导致程序异常，与front()类似的还有通过begin()数据下标获取对应元素，比如*srcList.begin()，或者srcList.begin()->GetID()，或者是srcList[0](在为vector时)。
+推荐做法： 
+bool Compliant(const NodeKeyList &srcList, const NodeKeyList &snkList)
+{    
+	if (srcList.empty() || snkList.empty()) //【修改】确保STL容器内有元素存在
+	{
+		return false;
+	}
+	NodeKey srcNode = srcList.front();
+	NodeKey snkNode = snkList.back();
+	/* ...do something... */
+}
+规则8.2：迭代子使用前必须保证迭代子有效
+说明：STL算法std::find()、std::find_if()和std::set::find()等有可能返回容器的end()位置，迭代子定义时可以不初始化，或者初始化指向容find()等方法返回的位置，与指针类似地，若未判断迭代子有效性，直接引用迭代子有可能导致程序崩溃。
+错误示例：
+void STLIterTest::IterReference_NoCompliant(int CmdCode, MAP_GENKEY_VALUE& allResult)
+{    
+	TEGenKey tmpKey;
+	tmpKey.attrID = DWDMTL1_ATTRPORT_CLIENTPRO;
+	tmpKey.objectID = it->first.objectID;
+	MAP_GENKEY_VALUE::iterator iter = allResult.find( tmpKey );
+	if ("FC100" != iter->second.sValue) //非FC100设置为无效
+	{
+		it->second.access = TEGenVar::ACCESS_INVALID;
+	}
+}
+示例代码通过map的find函数返回的迭代子iter，if语句直接通过iter->second来引用变量，如果迭代子iter指向为allResult的end()位置，则程序会崩溃。
+推荐做法：
+void STLIterTest::IterReference_Compliant(int CmdCode, MAP_GENKEY_VALUE& allResult)
+{
+	TEGenKey tmpKey;
+	tmpKey.attrID = DWDMTL1_ATTRPORT_CLIENTPRO;
+	tmpKey.objectID = it->first.objectID;
+	MAP_GENKEY_VALUE::iterator iter = allResult.find(tmpKey);
+	if (iter != allResult.end()) //【修改】确保迭代子有效后再进行操作
+	{
+		if ( "FC100" != iter->second.sValue)
+		{
+			it->second.access = TEGenVar::ACCESS_INVALID;
+		}
+	}
+}
+规则8.3：必须确保迭代子指向的内容有效
+说明：在理解上迭代子可以视为C指针，迭代子只有在指向了容器中一个存在的对象时，访问才是安全有效的，其他情况的访问都可能存在风险。典型问题：
+对连续内存容器来说(如std::vector)会分配一块固定内存来保存连续对象，在插入新元素后（成员函数包括：reserve()，resize()， push_back()，insert()等），可能会引起容器重新分配内存和数据迁移，如果在插入元素之前使用迭代子保存了迭代子位置，那么插入新元素之后，前面保存的迭代子就可能是无效的。
+错误示例1：下列代码的迭代子在操作过程中失效。
+void NoCompliant()
+{
+	deque<double> d;
+	double data[5] = { 2.3, 3.7, 1.4, 0.8, 9.6 };
+	deque<double>::iterator pos = d.begin();
+	for (size_t i = 0; i < 5; ++i)
+	{
+		d.insert(pos++, data[i] + 41); //【错误】insert操作后，pos已失效
+	} 
+}
+Insert操作后，迭代子pos已经失效，执行自增操作导致异常。
+推荐做法：
+void Compliant()
+{
+	double data[5] = { 2.3, 3.7, 1.4, 0.8, 9.6 };
+	deque<double> d;
+	deque<double>::iterator pos = d.begin();
+	for (size_t i = 0; i < 5; ++i) 
+	{
+  		pos = d.insert(pos, data[i] + 41); /*【修改】通过返回值获得新的有效的迭代子 */
+		++pos;
+	}
+}
+std::remove和std::remove_if仅会将被删除元素后移并返回应该被删除元素位置的迭代子，并没有正在从容器中删除对象，需要另配合erase函数才能删除，所以一般建议配合一起使用。
+错误示例2：下列代码中错误的仅使用remove()函数来删除容器中元素。
+void NoCompliant()
+{
+	vector<int> container;
+	int value = 42;
+	iterator end = remove( container.begin(), container.end(), value);
+	for (iterator i = container.begin(); i != container.end(); ++i) 
+	{ 
+		cout << "Container element: " << *i << endl;
+	}
+}
+remove() 删除任一个成员后返回值将指向任一个成员，值将不可预知。所以被删除后需要立即调用 erase()抹去，防止不可预知的数据访问。
+推荐做法：
+void Compliant()
+{
+	vector<int> container;
+	int value = 42;
+	container.erase(remove(container.begin(),container.end(),value), container.end()); /*【修改】remove删除成员后立即调用erase，确保迭代子指向的内容是有效的*/
+	for (iterator i = container.begin(); i != container.end(); ++i) 
+	{ 
+		cout << "Container element: " << *i << endl;
+	}
+}
+规则8.4：正确处理容器的erase()方法与迭代子的关系
+说明：调用容器的erase(iter)方法后，迭代子指向的对象被析构，迭代子已经失效，如果再对迭代子执行递增递减或者引用操作会导致程序崩溃。
+错误示例：下列代码中的迭代子在执行删除操作过程中已失效。
+void STLIterTest::IterVisitContainer_NoCompliant()
+{
+	std::map<oid,NE>::iterator it = m_mapID2NE.begin();
+	for (; it != m_mapID2NE.end(); )
+	{
+		if (pNEInfo->GetNEState(ulNEID) == NESTATE_LOGIN)
+		{ 
+			m_mapID2NE.erase(iter); 
+			iter++;  //【错误】erase后，iter指向的对象可能已失效
+		} 
+		else {++iter;}
+	} 
+}
+推荐做法：将迭代子后置递增作为erase()的参数。
+void STLIterTest::IterVisitContainer_Compliant()
+{
+	std::map<oid,NE>::iterator it = m_mapID2NE.begin();
+	for (; it != m_mapID2NE.end(); )
+	{
+		if ( pNEInfo->GetNEState(ulNEID) == NESTATE_LOGIN)
+		{ 
+			m_mapID2NE.erase(iter++); //【修改】将迭代子后置递增作为erase参数
+		} 
+		else {++iter;}
+	} 
+}
+也可以使用earse方法的返回值来保存迭代子，因为返回的是被删除元素迭代子指向的下一个元素位置：
+iter = erase(iter)。
+注意这种用法可以用于list和vector的erase()，但不适用于map。因为std::map::erase()的返回值在不同STL实现版本是有差异的，有的有返回值，有的没有返回值，所以对map只能使用推荐做法。
+9	C++类和对象安全
+规则9.1：禁止切分多态的类对象
+说明：当一个基类有继承类时，禁止从继承类对象到基类对象实例的拷贝，也不能在多个继承类的对象之间相互拷贝，这样会导致信息的丢失，程序运行异常，从而引发DOS（denial-of-service）。
+错误示例：下列代码中切分了类对象，会导致数据丢失。
+class Employee {
+public:
+	Employee(string theName) : name(theName){};
+	string getName() const {return name;}
+	virtual void print() const {
+		cout << "Employee: " << getName() << endl;
+	}
+private:
+	string name;
+};
+class Manager : public Employee {
+public:
+	Manager(string theName, Employee theEmployee) :Employee(theName), assistant(theEmployee) {};
+	Employee getAssistant() const {return assistant;}
+	virtual void print() const {
+		cout << "Manager: " << getName() << endl;
+		cout << "Assistant: " << assistant.getName() << endl;
+	}
+private:
+	Employee assistant;
+};
+int main () {
+	Employee coder("Joe Smith");
+	Employee typist("Bill Jones");
+	Manager designer("Jane Doe", typist);
+	coder = designer; // 【错误】切分了对象designer:Jane Doe
+	coder.print();
+}
+运行结果：Employee: Jane Doe
+示例代码中基类Employee，继承类Manager（增加了属性assistant），如果将Manager类的对象数据拷贝给Employee类的对象，则将发生对象切分，Manager类的assistant属性数据将丢失。
+推荐做法1（使用指针）：
+int main () 
+{
+	Employee *coder = new Employee("Joe Smith");
+	Employee *typist = new Employee("Bill Jones");
+	Manager *designer = new Manager("Jane Doe", *typist);
+	coder = designer;
+	coder->print();
+}
+推荐做法2（引用）：
+int main () 
+{
+	Employee coder("Joe Smith");
+	Employee typist("Bill Jones");
+	Manager designer("Jane Doe", typist);
+	Employee &toPrint = designer; // Jane remains entire
+	toPrint.print();
+}
+推荐做法3（使用智能指针）：
+int main () 
+{
+	auto_ptr<Employee> coder(new Employee("Joe Smith"));
+	auto_ptr<Employee> typist(new Employee("Bill Jones"));
+	auto_ptr<Manager> designer(new Manager("Jane Doe", *typist));
+	coder = designer; // Smith deleted, Doe xferred
+	coder->print();
+	// everyone deleted
+}
+
+运行结果：
+Manager: Jane Doe
+Assistant: Bill Jones
+规则9.2：禁止定义基类析构函数为非虚函数，所有可能被继承类的析构函数都必须定义为virtual
+说明：基类的析构函数如果不是virtual的，那么在对一个Base类型的指针进行delete时，就不会调用到派生类Derived的析构函数。而派生类里的析构函数一般会用于析构其内部的子对象，这样就可能会造成内存泄漏。
+错误示例：代码中的析构函数没有被定义成虚函数。
+class Base 
+{
+public:
+	~Base(){}; //【错误】禁止定义基类析构函数为非虚函数
+};
+class Derived : public Base 
+{
+private:
+	char *pc;
+public:
+	Derived()
+	{
+		pc=new char[100]; 
+	};
+	~ Derived()
+	{
+		delete [] pc;
+	};
+};
+void main()
+{
+	Base *obj = new Derived();
+	delete obj;
+}
+以上示例代码基类Base的析构函数不是virtual的。因为不是virtual，所以在对Base类型的指针obj进行delete时，不会调用到派生类Derived的析构函数,这样就造成内存泄漏。 
+推荐做法：基类Base的析构函数定义为virtual，这样确保在对Base类型的指针obj进行delete时调用派生类Derived的析构函数。
+class Base {
+public:
+	virtual ~Base(){};//【修改】定义基类析构函数为虚函数
+};
+class Derived : public Base {
+private:
+	char *pc;
+public:
+	Derived()
+	{
+		pc=new char[100]; 
+	};
+	~ Derived()
+	{
+		delete [] pc;
+	};
+};
+void main()
+{
+	Base *obj = new Derived();
+	delete obj;
+}
+规则9.3：避免出现delete this操作
+说明：对象指针应避免使用delete this语句硬删除，除非能保证this指针删除后不再被引用，并且保证对象是通过new操作符在堆上创建的。 
+原因有两个：
+（1）类的对象既可能是栈对象，也可能是堆对象。如果对栈对象的指针进行delete，即删除非动态分配的内存，会导致未定义行为；
+（2）二是delete this容易产生悬挂指针（dangling pointer），悬挂指针是个严重的安全漏洞，可以被攻击者利用执行任意代码。
+错误示例：错误的删除this指针
+class SomeClass 
+{ 
+public:
+	SomeClass();
+	~SomeClass();
+	void doSomething();
+	void destroy();
+	// ...
+}; 
+void SomeClass::destroy() 
+{
+	/* ...do something... */
+	delete this; //【错误】删除this指针会导致出现悬挂指针
+} 
+
+void main()
+{
+	/* ...do something... */
+	SomeClass sc; // 声明栈对象
+	/* ...do something... */
+	sc.destroy(); // 释放非动态分配的内存。
+}
+推荐做法1：不delete this，让栈对象离开作用域后自动析构。
+class SomeClass 
+{ 
+public:
+	SomeClass();
+	~SomeClass();
+	void doSomething();
+	void destroy();
+	// ...
+}; 
+void SomeClass::destroy() 
+{
+	/* ...do something... */
+	// delete this; // Dangerous!!
+} 
+// ... 
+
+void main()
+{ 
+	SomeClass sc; // 声明栈对象
+	/* ...do something... */
+} // 离开作用域，自动调用sc.~SomeClass()
+如果不得不使用delete this，保证类对象是堆对象，且this指针delete后置NULL，可参考如下示例代码：
+class SomeClass 
+{ 
+public:
+	SomeClass();
+	void doSomething();
+	void destroy();
+	// ...
+protected:
+	~SomeClass(); 
+}; 
+void SomeClass::destroy() 
+{
+	/* ...do something... */
+	delete this; 
+} 
+// ... 
+{ 
+	SomeClass* sc = new SomeClass(); 
+	/* ...do something... */
+	sc->destroy(); 
+	sc = NULL;
+} 
+这个示例代码中，将析构函数声明为protected，可以保证类SomeClass的对象不会在栈上生成。同时，在显示调用destory()来delete this指针后，再将指针置NULL，防止指针解引用。
+延伸阅读材料：Dangling Pointer, Jonathan Afek, 2/8/07, BlackHat USA
+规则9.4：禁止在类的公共接口中返回类的私有数据地址
+说明：如果一个类私有成员数据的引用或者其指针，被类的公有函数作为返回值return，则此私有数据可能会遭受到非可信代码的修改，导致引入不安全因素。
+例子1：
+错误示例：下列代码类中的私有成员变量被公共成员函数所引用。
+class Widget { 
+public: 
+	Widget (): total(0) {} 
+	// …
+	void add (someType someParameters) 
+	{ 
+		/* ...do something... */
+		total ++; 
+		/* ...do something... */
+	} 
+	void remove (someType someParameters) 
+	{ 
+		/* ...do something... */
+		total --;
+		/* ...do something... */
+	} 
+	// …
+	int& getTotal () {return total;} //【错误】禁止返回类的私有数据成员地址
+	// …
+private: 
+	int total; 
+	// …
+};
+示例代码中，total作为类的私有成员，维护着对类方法add与remove的调用计数，但是其实际值却被类的公共成员函数getTotal对外提供了可引用的接口。
+推荐做法：
+class Widget { 
+public: 
+	Widget(): total(0) {} 
+	// …
+	void add(someType someParameters) 
+	{ 
+		/* ...do something... */
+		total ++; 
+		/* ...do something... */
+	} 
+	void remove(someType someParameters) 
+	{ 
+		/* ...do something... */
+		total --;
+		/* ...do something... */
+	} 
+	// …
+	int getTotal() {return total;}
+	// …
+private: 
+	int total;
+	// …
+};
+建议9.1：重载后缀操作符应返回const类型
+说明：前缀操作符返回的结果是non-const引用，而后缀操作符返回的可能是临时变量或者一个地址，这两者意味着在后续的操作中其值可能会被修改，因此当重载后缀操作符时，建议重载函数返回值类型为const。
+错误示例：
+class X 
+{
+public:
+	X& operator++(); // prefix ++a
+	X operator++(int); // postfix a++
+};
+class Y { };
+Y& operator++(Y&); // prefix ++b
+Y operator++(Y&,int); // postfix b++
+通常对于++的定义如上所示。
+#include <iostream>
+#include <vector>
+using namespace std;
+int main() 
+{
+	vector<char> v(5, 'c');
+	vector<char>::iterator i = v.begin();
+	*++i++ = 'd'; // line 10
+	*i = 'e';
+	for (i = v.begin(); i != v.end(); ++i) cout << *i;
+	cout << endl;
+	return 0;
+}
+运行结果：deccc
+示例代码展示了虽然在第10行(*++i++ = 'd';)，连续调用了两次后缀加操作，但实际上进行了一次自加操作。第二个自加操作针对的对象是临时对象，自加后的结果随后被丢弃，未被保存下来。
+推荐做法：
+class X 
+{
+public:
+	const X& operator++(); //【修改】重载++a时返回const类型
+	const X operator++(int); //【修改】重载a++时返回const类型
+};
+class Y { };
+const Y& operator++(Y&); // prefix ++b
+const Y operator++(Y&,int); // postfix b++
+推荐将自加和自减后缀操作符的返回值定义为const型，这样在编译时编译器就会告警，从而避免之前错误的发生。
+建议9.2：显式声明的模板类应进行类型特化
+说明：编译器不会严格地验证模板的参数，容易被破解者利用，并造成攻击。
+错误示例：模板类使用错误。
+template <typename T>
+class A 
+{
+public: 
+	void f1() {/* ... */}
+	void f2() 
+	{
+		T t;
+		t.x = 50;
+	}
+};
+int main() 
+{
+	A<int> a;    // 【错误】A<int>::f2有问题，int并不是class且没有成员变量x
+	a.f1();
+}
+示例代码A<INT>::f2明显是有问题的，因为类型int并不是class，并且也没有成员变量x。很明显，模板A的设计者并不是将该模板应用于类型int。然而编译器并不会捕捉到这个错误，因此代码会被成功编译，却引入了缺陷。
+推荐做法：
+template <typename T>
+class A 
+{
+public: 
+	void f1() {/* ... */}
+	void f2() 
+	{
+		T t;
+		t.x = 50;
+	}
+};
+template class A<int>; //【修改】显示声明模板类特化
+int main() 
+{
+	A<int> a;
+	a.f1();
+}
+添加如上代码后，编译器会捕获到样例代码中的错误，因为模板的声明会强制编译器初始化类的所有成员，包括A<int>::f2()，此时就会捕获到编译错误。
+10	其它
+规则10.1：禁止使用rand()产生用于安全用途的伪随机数
+说明：C标准的不安全随机数产生函数rand()随机性很不好，产生的随机数序列存在一个较短的循环周期，因此它的随机数是可预测的，禁止用于安全用途。
+安全用途的场景包括但不限于以下几种：
+	SessionID的生成
+	挑战算法中的随机数生成
+	验证码的随机数生成
+	生成重要随机文件（存有系统信息等的文件）的随机文件名
+	和生成密钥相关的随机数生成
+错误示例：下列代码中使用不安全的随机数生成函数rand()来生成随机数。
+void  Noncompliant()
+{
+	enum {len = 12};
+	char id[len]; /* id will hold the ID, starting with
+				  * the characters "ID" followed by a
+				  * random integer */
+	int r;
+	int num;
+	/* ...do something... */
+	r = rand();//【错误】rand函数产生的随机数是可预测的，不安全的
+	num = snprintf(id, len, "ID%-d", r); /* generate the ID */
+	/* ...do something... */
+}
+以上代码利用rand()产生一个ID的数字部分，因此这些ID是可预测的并且随机性有很大限制。
+推荐做法：Unix/Linux下采取建议读取/dev/random文件来获取真随机数。
+void  Compliant()
+{
+	enum {len = 12};
+	char id[len]; /* id will hold the ID, starting with
+				    * the characters "ID" followed by a 
+				    * random integer */
+	int r = 0;
+	int num;
+	/* ...do something... */
+	int fd;
+	fd = open("/dev/random", O_RDONLY);
+	if (fd > 0)
+	{
+		read (fd,&r,sizeof (int)); /* generate a random integer from /dev/random */
+	}
+	close (fd);
+	num = snprintf(id, len, "ID%-d", r); // generate the ID 
+	/* ...do something... */
+}
+Windows推荐使用随机数生成函数CryptGenRandom()：
+#include "Wincrypt.h"
+void  Compliant ()
+{
+	HCRYPTPROV hCryptProv;
+	union 
+	{
+		BYTE bs[sizeof(long int)];
+		long int li;
+	} rand_buf;
+	if (!CryptGenRandom(hCryptProv, sizeof(rand_buf), &rand_buf))
+	{
+		/* Handle error */
+	} 
+	else 
+	{
+		printf("Random number: %ld\n", rand_buf.li);
+	}
+}
+由于以上推荐的2种做法并不能保证主流编译环境下满足可靠性要求，对于可靠性要求很严格的产品可以使用开源组件openssl或我司中研封装的iPSI组件：
+Openssl示例：
+#include <stdio.h> 
+#include <openssl/bio.h> 
+#include <openssl/rand.h> 
+int Compliant() 
+{ 
+	char buf[20]; 
+	const char* p;
+	unsigned char outBuf[20]; 
+	char file[50]; 
+	int ret,len; 
+	BIO *bio_stdout; 
+	//①方式
+	//int RAND_pseudo_bytes(unsigned char *buf, int num);
+	//RAND_pseudo_bytes() puts num pseudo-random bytes into buf
+	unsigned char rkey[16];
+	RAND_pseudo_bytes(rkey, sizeof rkey);
+	//②方式, 最终调用的RAND_bytes产生的随机数。
+	RAND_screen(); //以屏幕内容作为"seed"产生随机数
+	strcpy(buf, ""); 
+	RAND_add(buf, 20, strlen(buf)); 
+	strcpy(buf, "23424d"); 
+	RAND_seed(buf, 20); 
+	while(1) 
+	{ 
+		ret=RAND_status(); 
+		if(ret == 1) 
+		{ 
+			printf("seeded enough!\n"); 
+			break; 
+		} 
+		else 
+		{ 
+			printf("not enough sedded!\n"); 
+			RAND_poll(); 
+		} 
+	} 
+	/*
+	RAND_file_name() generates a default path for the random seed file. buf
+	points to a buffer of size num in which to store the filename. The seed
+	file is $RANDFILE if that environment variable is set, $HOME/.rnd
+	otherwise. If $HOME is not set either, or num is too small for the path
+	name, an error occurs. 
+	*/
+	p=RAND_file_name(file, sizeof(file)); 
+	if(p == NULL) 
+	{ 
+		printf("can not get rand file\n"); 
+		return -1; 
+	} 
+	/*
+	RAND_write_file() writes a number of random bytes (currently 1024) to
+	file filename which can be used to initialize the PRNG by calling
+	RAND_load_file() in a later session. 
+	*/
+	ret=RAND_write_file(p); 
+	//PRNG 伪随机数发生器(PRNG)是一个软件，其产生一个被叫做基于一些算法的随机数。
+	/* 实际上它不是一个实际的随机数字而是一个伪随机数。最后伪随机数保持对一个度或另一个是可预言的。这个随机数产生器是一个伪随机数产生器。 */
+	len=RAND_load_file(p, 1024); 
+	ret=RAND_bytes(outBuf, 20); 
+	if(ret != 1) 
+	{ 
+		printf("err.\n"); 
+		return -1; 
+	} 
+	bio_stdout=BIO_new(BIO_s_file()); 
+	BIO_set_fp(bio_stdout, stdout, BIO_NOCLOSE); 
+	BIO_write(bio_stdout, outBuf, 20); 
+	BIO_write(bio_stdout, "\n", 2); 
+	BIO_free(bio_stdout); 
+	RAND_cleanup(); 
+	return 0; 
+}
+iPSI示例：
+#include "sec_crypto.h" 
+void Compliant()
+{
+	SEC_UCHAR buf[100] = {0};
+	CRYPT_random(buf, sizeof(buf));  // 使用我司的iPSI组件
+	/*...*/
+}
+规则10.2：禁止存储getenv()返回的字符串指针
+说明：getenv()的返回指针指向值可能会被后续的getenv()调用所覆盖，或者因为调用putenv()/setenv()及其他办法修改了环境变量值而变得无效。存储该返回值可能会导致一个危险的指针或者引用错误的数据，因此该返回的字符串应该被马上引用然后丢弃，如果需要在后续使用该字符串，应该把该字符串拷贝到内存里，然后在需要的时候引用该份拷贝。
+除此之外，getenv()不是线程安全的，要确保处理使用该函数可能导致的竞争情况。
+错误示例：下列代码错误的保存了getenv()返回的字符串指针。
+void  Noncompliant()
+{
+	char *tmpvar = getenv("TMP");
+	if (!tmpvar) 
+		return -1;
+	char *tempvar = getenv("TEMP");//【错误】不要存储getenv()返回的字符串指针
+	if (!tempvar) 
+		return -1;
+	if (strcmp(tmpvar, tempvar) == 0) 
+	{
+          /* … */
+	}
+     /* … */
+}
+示例代码比较环境变量TMP和TEMP的值是否相同。在示例代码中，tmpvar指向的内容可能会因为第二次调用getenv()而被改写，从而导致tmpvar和tempvar指向相同的内容，即使环境变量TMP和TEMP的值并不相同。
+推荐做法：
+使用malloc()和strncpy()来拷贝存储getenv()的返回值。
+char *Getenvstr(const char* env)
+{
+	const char *temp = getenv(env);
+	if (temp != NULL) 
+	{
+		int len = strlen(temp);
+		tmpvar = (char *)malloc(len+1);
+		if (tmpvar != NULL) 
+		{
+			strncpy(tmpvar, temp, len);
+			tmpvar[len] = ’\0’;
+			return tmpvar;
+		}
+	}
+	return NULL;
+}
+void  Compliant()
+{
+	char *tmpvar = Getenvstr("TMP");
+	if (tmpvar == NULL) 
+	{
+		/* Handle error */
+	}
+	char *tempvar = Getenvstr("TEMP"); //【修改】将getenv()的字符串存储下来
+	if (tempvar == NULL) 
+	{
+		/* Handle error */
+	}
+	if (strcmp(tmpvar, tempvar) == 0) 
+	{
+		/* ...do something... */
+	}
+	/* ...do something... */
+	/* ...tempvar使用后free... */
+}
+规则10.3：多线程环境下，禁止使用可能会导致crash的不安全函数
+（1）多线程环境下，禁止std::cout与printf混用
+说明：printf与std::cout分别为标准c语言与C++中的函数，两者的缓冲区机制不同（printf无缓冲区，而std::cout有），而且对于标准输出的加锁时机也略有不同：
+	printf: 在对标准输出作任何处理前先加锁；
+	std::cout: 在实际向标准输出打印时方才加锁；
+二者存在微弱的时序差别，而多线程环境下，很多问题就是由于微弱的时序差别造成的。所以两者的混用很容易带来不可预知的错误，常见的错误有打印输出的结果不符合预期，而严重错误时甚至会导致内部缓存区溢出，导致crash。
+错误示例：cout和printf混用可能导致crash。
+void NoCompliant()
+{
+	int j=0;
+	for(j=0; j<5; ++j)
+	{
+		cout << "j=";        //【错误】混用cout和printf在多线程中会导致crash
+		printf("%d\n", j);
+	}
+}
+上面代码的输出结果很可能为：
+1
+2
+3
+4
+j=j=j=j=j=
+这很明显不符合程序员的预期。造成这样错误的原因就是std::cout的标准流输出是带有缓冲区的，如果没有及时清理缓冲区而在期间采用了其它系统的输出函数，可能会暴露两种输出函数的不兼容性，从而出现非预期错误。所以建议在代码中检查对于系统标准打印输出的兼容性，一定要使用统一的打印输出方法,而对于C++程序，更推荐统一使用流输出方法，而不推荐使用C风格的代码。
+推荐做法：
+void Compliant()
+{
+	int j=0;
+	for(j=0; j<5; ++j)
+	{
+		printf("j=");
+		printf("%d\n", j); //【修改】只用printf
+	}
+}
+或者
+void Compliant()
+{
+	int j=0;
+	for(j=0; j<5; ++j)
+	{
+		cout<<"j=";
+		cout<< j << "\n"; //【修改】只用cout
+	}
+}
+（2）多线程环境下，禁止使用strtok函数
+说明：strtok是一个线程不安全的函数，因为它使用了静态分配的空间来存储被分割的字符串位置。初次调用strtok时传递一个字串的地址，比如”aaa.bbb.dddd”,将字串的地址保存在自己的静态变量中，当再次调用strtok并传递NULL时（strtok的特殊用法，第二次调用时字串传NULL表示对第一次传进去的字串继续分隔，所以要先保存字串地址），该函数就会引用保存好的字串地址。在多线程环境下，另一个线程也可能调用strtok，在这种环境下，另一个线程会在第一个线程不知道的情况下替换静态变量中的字串地址，这就会导致各种难以排除的错误出现。
+错误示例：下面这个程序是一个用来确定一个文本中的每行单词个数的平均次数的错误算法。wordaverage_Nocompliant函数用来确定每一行，不幸的是，wordcount_Nocompliant函数也使用了strtok，这一次是用它来解析本行中的字，这时，strtok保持的内部状态信息被改变了。
+#include <string.h>
+#define LINE_DELIMITERS "\n"
+#define WORD_DELIMITERS " "
+static int wordcount_Nocompliant(char *s)
+{
+	int coutn = 1;
+	if(strtok(s,WORD_DELIMITERS) == NULL) /* 【错误】多线程环境下使用strtok会出现crash */
+		return 0;
+	while(strtok(NULL, WORD_DELIMITERS) != NULL)
+		count++;
+	return count;
+}
+double wordaverage_Nocompliant(char *s)
+{
+	int linecount = 1;
+	char* nextline;
+	int words;
+	nextline = strtok(s, LINE_DELIMITERS);
+	if(nextline==NULL)
+		return 0.0;
+	words = wordcount(nextline);
+	while((nextline = strtok(NULL, LINE_DELIMITERS)) != NULL)
+	{
+		words += wordcount(nextline);
+		linecount++;
+	}
+	return (double)words/linecount;
+}
+推荐做法：带有_r的函数主要来自于UNIX下面。所有的带有_r和不带_r的函数的区别的是：带_r的函数是线程安全的，r的意思是reentrant，可重入的。
+#include <string.h>
+#define LINE_DELIMITERS "\n"
+#define WORD_DELIMITERS " "
+static int wordcount_Compliant(char *s)
+{
+	int coutn=1;
+	char *lasts;
+	if(strtok_r(s, WORD_DELIMITERS, &lasts) == NULL) /* 【修改】使用strtok_r代替strtok */
+		return 0;
+	while(strtok_r(NULL ,WORD_DELIMITERS, &lasts) != NULL)
+		count++;
+	return count;
+}
+double wordaverage_Compliant(char *s)
+{
+	int linecount = 1;
+	char* nextline;
+	int words;
+	char* lasts;
+	nextline = strtok_r(s, LINE_DELIMITERS, &lasts);
+	if(nextline == NULL)
+		return 0.0;
+	words = wordcount(nextline);
+	while((nextline = strtok_r(NULL, LINE_DELIMITERS, &lasts)) != NULL)
+	{
+		words += wordcount(nextline);
+		linecount++;
+	}
+	return (double)words/linecount;
+}
+建议10.1：编译时应当使用编译器的最高警告等级
+说明：程序员应当使用编译器的最高警告等级。在编译过程中，应该修改程序中的错误，直到警告解除。在此同时，应当使用静态和动态的分析工具来检测和清除安全缺陷。
+另外，开启一些和安全相关的编译选项，可以使编译出来的程序具有更好的安全特性。
+对于GCC编译器，建议开启以下安全选项：
+（1）使用PIE选项（gcc -fPIE / ld -pie），可以将源代码编译成和位置无关的可执行程序。
+（2）使用-fstack-protector-all或-fstack-protector选项，通过栈保护，来防止程序出现缓冲区溢出错误。
+对于VC（VS2005及以上的版本）编译器，可以开启如下和安全相关的编译选项：
+（1）GS（栈保护）：通过在栈中加入校验单元来防止出现缓冲区溢出错误。
+（2）NXCOMPAT（与数据执行保护兼容）：DEP，也就是数据执行保护，可以有效降低堆或栈上的缓存溢出漏洞的危害性。采用NXCOMPAT选项后，应用程序的运行被DEP 机制保护。在考虑兼容性的前提下，建议开发人员采用NXCOMPAT链接选项。
+（3）ASLR（地址空间分布随机）：是一种针对缓冲区溢出的安全保护技术，通过对堆、栈、共享库映射等线性区布局的随机化，通过增加攻击者预测目的地址的难度，防止攻击者直接定位攻击代码位置，达到阻止溢出攻击的目的。
+建议10.2：防止处理敏感数据的代码因被编译器优化而失效
+说明：有时候编译器在优化时会删除一些它认为不必要的代码，但实际这些看似多余的代码是存在安全考虑。一个典型的例子就是函数返回前清除栈上敏感数据的操作，如果这些操作被删除掉，攻击者就有机会访问栈上的敏感数据。因此必须确保这些安全操作在编译器优化的场景下仍然得以执行。
+错误示例：下列代码使用了可能被编译器优化掉的语句。
+void  Noncompliant()
+{
+	char pwd[64];
+	if (retrievePassword(pwd, sizeof(pwd))) 
+	{
+		/* checking of password, secure operations, etc */ 
+	} 
+	memset(pwd, 0, sizeof(pwd));   //【错误】编译器优化可能会使该语句失效 
+}
+某些编译器在优化时候不会执行它认为不会改变程序执行结果的代码，因此memset()操作会被优化掉。
+推荐做法1：
+void  Compliant()
+{
+	char pwd[64];
+	if (retrievePassword(pwd, sizeof(pwd))) 
+	{
+		/*checking of password, secure operations, etc */
+	}
+	SecureZeroMemory(pwd, sizeof(pwd));
+	*(volatile char*)pwd = *(volatile char*)pwd; /* 【修改】使用volatile自赋值语句，确保pwd被处理 */
+}
+在windows下可使用系统提供的SecureZeroMemory函数来安全清零敏感数据。
+推荐做法2：
+void  Compliant()
+{
+	char pwd[64];
+	if (retrievePassword(pwd, sizeof(pwd))) 
+{
+		/* checking of password, secure operations, etc */
+	}
+#pragma optimize("", off)   //【修改】禁用部分优化编译选项，确保pwd被处理
+	memset(pwd, 0, sizeof(pwd));
+#pragma optimize("", on)
+}
+如果编译器支持#pragma指令，那么可以使用该指令指示编译器不要优化此处的操作。
+推荐做法3：
+/* memset_s.c */
+errno_t memset_s(void *v, rsize_t smax, int c, rsize_t n) 
+{
+	if (v == NULL) return EINVAL;
+	if (smax > RSIZE_MAX) return EINVAL;
+	if (n > smax) return EINVAL;
+
+	volatile unsigned char *p = v;
+	while (smax-- && n--) 
+	{
+		*p++ = c;
+	}
+	return 0;
+}
+/* getPassword.c */
+extern errno_t memset_s(void *v, rsize_t smax, int c, rsize_t n);
+void getPassword(void) 
+{
+	char pwd[64];
+	if (retrievePassword(pwd, sizeof(pwd))) 
+	{
+		/*checking of password, secure operations, etc */
+	}
+	if (memset_s(pwd, sizeof(pwd), 0, sizeof(pwd)) != 0)    /*【修改】使用memset_s，确保pwd被处理 */
+	{
+		/* Handle error */
+	}
+}
+该方案是通过volatile类型通知编译器要对该段内存赋值且memset_s的调用不可被优化。如果编译器支持C11标准，那么可以直接调用C11中的标准memset_s函数来完成此操作。
+11	参考资料
+1.	Robert C.Seacord. The Cert C Secure Coding Standard. Pearson Education, 2009
+2.	CERT C++ Secure Coding Standard. https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=637
+3.	Robert C.Seacord. Secure Coding in C and C++. Addison Wesley Professional, 2005
