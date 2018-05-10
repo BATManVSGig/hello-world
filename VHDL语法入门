@@ -1,1 +1,624 @@
+BUFFER
+可以从实体输出至外部；
+也可以从端口回读该输出值至实体；
+不可以从外部输入至实体；
+单向端口（伪双向端口）；
+
+
+构造体
+构造体
+architecture
+一个设计实体的功能与（/或）结构描述
+一个设计实体可以有多个构造体
+语法格式
+	architecture 构造体名 of 设计实体名 is
+	   [说明区；]
+	begin
+	   [执行语句区；]
+	end  [构造体名] ；
+1
+architecture data_flow of xor_gate is
+begin
+  c<=(a and (not b)) or ((not a) and b);
+end data_flow; 
+2
+architecture behavioral of xor_gate is
+begin
+  process(a, b)
+  begin
+    if (a=’0’ and b=’1’) then
+      c<=’1’;
+    elsif (a=’1’ and b=’0’) then
+      c<=’1’;
+    else
+      c<=’0’;
+    end if;
+  end process;
+end behavioral; 
+3
+architecture structure of
+                  xor_gate is
+  component not_gate
+    port(a: IN bit;
+         b: OUT bit);
+  end component;
+  component and_gate
+    port (a, b: IN bit;
+             c: OUT bit);
+  end component;
+  component or_gate
+    port (a, b: IN bit;
+             c: OUT bit);
+  end component; 
   
+  配置说明
+将具体的构造体分配给实体说明
+示例
+configuration conf1 of xor_gate is
+    for data_flow
+    end for;
+end conf1;
+configuration conf2 of xor_gate is
+    for structure
+    end for;
+end conf1;
+关于构件的几点说明
+实体说明是必须的；
+构造体是必须的；
+库引用说明可要可不要，但一般需要；
+配置说明可要可不要，但一般不需要；
+
+关键字
+标识符
+数值表示
+文法格式
+
+  如 entity, architecture, package, configuration, port, begin, end, 等，
+26个英文大/小写字母（首字符必用字母）；
+数字0-9 ；
+下划线‘_’ ；
+不能用关键字 ；
+
+数字
+十进制数，2-16为基的数； 
+整数，浮点实数；
+前面可加0，中间不能加0；
+相邻数字之间可插入下划线‘_’；
+
+
+十进制：012，12_3，2E3；12.0，2.5E2； 
+
+2进制：2#11_11#，2#1011#E4；2#100.1111#E2；
+
+16进制：16#5A#，16#28_C#E4；16#22.8FF#E3；
+
+字符
+被单引号括起来的ASCII字符，如，‘a’–‘Z’，‘0’–‘9’等； 
+
+字符串
+被双引号括起来的ASCII字符，如，“Hello”； 
+
+位串
+被双引号括起来的数字序列，其前冠以基数说明符；如，B“0110_1111”，O“117”，X“FFE0”； 
+
+关键字、标识符：不区分大小写；
+
+注释：‘--’，且只在该文本行有效；
+
+分隔：‘；’为行分隔，VHDL的语句行可写在不同文本行中 ；
+
+空格：除关键字、标识符自身中间不能插入空格外，其他地方可插入任意数目的空格 ；
+
+数据对象
+数据类型
+
+	VHDL语言中用于进行赋值等操作的客体 
+信号（Signal）
+信号赋值：
+	sig <= a + b;
+信号说明：
+端口信号
+	port (端口信号名：端口模式 数据类型名 [:=初始值]；…)； 
+内部信号
+	signal  信号名：数据类型名 [:=初始值]； 
+	例：signal  sel:  bit  := ’0’; 
+
+变量（Variable）
+
+变量赋值：
+	var := a + b;
+
+变量说明：
+variable  变量名：数据类型名 [:=初始值]； 
+
+例：variable  det:  bit  := ’0’; 
+
+信号与变量的区别
+
+信号：
+用于与外部的接口，及；
+用于构造体中的各进程模块之间或其内部；
+全局性数据对象；
+
+变量：
+用于进程、子程序等模块的内部；
+局部性数据对象；
+
+数据类型
+	VHDL语言中数据对象被赋予的类型，如Integer（整型）、Bit（位型）等； 
+VHDL -- 强类型语言
+
+预定义类型 vs. 自定义类型：
+如Integer, Real, Bit等已经在VHDL标准中预先定义，可直接使用 ；
+也可按照类型说明的格式自定义用户所需的类型；
+
+类型的分类
+
+标量类型（基本数据类型）
+整数类型
+实数类型
+枚举类型
+物理类型
+
+复合类型（基于标量类型的复合数据类型）
+数组
+记录
+
+标量类型
+预定义类型：
+	如Integer, Real, Bit, Boolean, Character, Time等（STANDARD程序包 ）
+
+类型说明（以上述预定义类型说明为例）
+
+整型、实型： 
+	type Integer is range –2147483647 to +2147483647;
+		  -- 32位整数 
+	type Real is range –1.0E+38 to +1.0E+38; 
+	   -- 浮点数 
+
+枚举： 
+	type  Bit  is  (’0’,’1’); 
+	type  Boolean  is  (false, true);  
+
+物理：
+	type  Time  is range –2147483647 to +2147483647
+		    units 	fs; 
+			ps=1000 fs; 
+			ns=1000 ps; 
+			us=1000 ns;
+			ms=1000 us; 
+			sec=1000 ms;
+			min=60 sec;
+			hr= 60 min;
+	    end units;
+复合类型
+预定义类型：
+	如数组 Bit_vector 等（STANDARD程序包 ）
+
+类型说明
+数组： 
+	type Bit_vector is array  (Natural range <>)  of  Bit; 
+		  -- 非限定性数组，数组的下标范围可在以后确定，
+	   -- 如，signal d_bus: Bit_vector(7 downto 0) ;
+	
+	type bit8 is array  (7 downto 0)  of  Bit;  
+	   -- 自定义数组类型
+     
+type date is record
+	  day:  Integer  range  1 to 31;
+	  month:  Integer  range  1 to 12;
+	  year:  Integer  range  0 to 3000;
+	end record;
+
+子类型
+	对一些已定义的数据类型进行一定的范围限制，从而形成一种特殊的数据类型
+
+子类型说明
+
+标量子类型： 
+	subtype  int4  is  Integer  range  (-8 to 7);  
+
+非限定性数组子类型： 
+	subtype  bit8  is  Bit_vector(7 downto 0);
+
+子类型
+	对一些已定义的数据类型进行一定的范围限制，从而形成一种特殊的数据类型
+
+子类型说明
+
+标量子类型： 
+	subtype  int4  is  Integer  range  (-8 to 7);  
+
+非限定性数组子类型： 
+	subtype  bit8  is  Bit_vector(7 downto 0);
+
+隐含子类型说明
+（没有显式的子类型名） 
+
+signal  dat: Integer  range 0 to 15;
+
+variable bit8: Bit_vector(0 to 7);
+
+architecture st of sub_test is
+  subtype int4 is integer range –8 to 7;
+  type my_int4 is range –8 to 7;
+  signal a1, a2: integer;
+  signal b: int4;
+  signal c: my_int4;
+Begin
+
+  a1<=b;			-- legal
+  a2<=c;			-- illegal !
+
+end st;
+
+算术运算符：、、、、MOD、REM、**、ABS
+关系运算符：、、、、、
+逻辑运算符：NOT、AND、NAND、OR、NOR、XOR
+符号运算符：（正号）、（负号）
+连接运算符：&（字符串 or 位串）
+
+VHDL语言中由运算符将对象、常数、函数调用及括号等基本元素连接起来的式子
+
+算术表达式：a  b
+关系表达式：x  y
+逻辑表达式：a1 AND a2
+
+并行语句
+顺序语句
+说明语句
+
+并行语句
+可以并发执行的语句，其结果与书写先后顺序无关
+
+并行信号赋值语句
+进程语句
+元件例化语句
+
+entity contrl is
+  port(n: IN integer;
+        clk: IN bit;
+        clk_out: OUT bit);
+end;
+
+architecture exmp of contrl is
+  component clk_gen
+    port(clk_in, switch: IN bit;	      clk_out: OUT bit);
+  end component;
+  ------------------------
+  --  switch=’1’: 2分频
+  --  switch=’0’: 原频
+  ------------------------
+
+  signal sw,cmp: bit;
+begin
+  u1: clk_gen
+    port map(clk, sw, clk_out)；
+
+  sw<=not cmp;
+  
+  process(n)
+  begin
+    if n>=2 then
+      cmp<=’0’;
+    else
+      cmp<=’1’;
+    end if;
+  end process;
+end; 
+并行信号赋值语句
+
+语法格式：
+	信号名<=表达式 [after t];        -- 表达式：包含有信号、常量、运算符等 
+
+语句激活时机：赋值号右边表达式中的信号变化
+
+变型1：条件信号赋值语句
+			when … else 型
+
+变型2：选择信号赋值语句
+			with … select / when 型
+进程语句
+
+语法格式：
+	[进程标号:]  process( [进程敏感信号表] ) 
+			[说明语句；] 
+		             begin
+			顺序执行语句；
+		             end process; 
+
+语句激活时机：敏感信号表中的信号发生变化
+元件例化语句
+
+语法格式：
+	元件标号:  元件名  port map( 接口信号实参表 )；
+
+语句激活时机：元件接口信号表中的信号发生变化
+并行语句的两种状态
+
+激活态：
+	语句被激活进而执行相关操作的状态；
+
+空闲态：
+	语句执行完毕之后转为挂起休眠的状态，等待下一次激活；
+顺序语句
+必须顺序执行的语句，其执行结果与书写先后顺序有关
+
+赋值语句
+分支控制语句
+循环控制语句
+同步控制语句
+赋值语句
+信号赋值语句
+变量赋值语句
+
+分支控制语句
+条件IF语句块
+选择CASE语句块
+
+循环控制语句
+while  条件表达式  loop
+for  循环步进条件  loop 
+Next 语句
+Exit 语句
+
+同步控制语句
+wait  on
+wait  until
+wait  for
+
+说明语句
+非执行语句，用于说明或定义
+
+端口说明：实体
+类型说明：程序包、构造体、进程、子程序
+对象说明：构造体  /  进程、子程序
+元件说明：构造体
+子程序说明：程序包、构造体、进程、子程序
+库引用说明：实体  之前
+
+architecture behavioral of xor_gate is
+begin
+  process(a, b)
+  bein
+    if (a=’0’ and b=’1’) then
+      c<=’1’;
+    elsif (a=’1’ and b=’0’) then
+      c<=’1’;
+    else
+      c<=’0’;
+    end if;
+  end process;
+end behavioral; 
+特点
+
+模块形式的并行语句，只能出现在构造体的程序区；
+主要用于设计实体的算法和功能描述，即行为描述；
+其程序区只能包含顺序语句；
+
+可包含信号和变量两种数据对象：
+变量为进程内部对象，不可跨越进程；
+信号为实体全局对象，用于与其它实体内模块建立联系；
+
+语法格式
+	[进程标号:]   process( [敏感信号表] ) 
+			[进程说明区] 
+          	       begin
+			[进程程序区]
+       		      end process; 
+
+进程说明区：只能定义类型、变量、子程序，不能定义信号；
+进程程序区：只能包含顺序语句；
+
+敏感信号表
+可以激活该进程的信号列表
+
+
+
+
+
+
+敏感信号表中信号的变化将激活所在进程；
+敏感信号表中只能包含信号，不能包含变量
+
+同步控制
+process()
+  variable tmp: bit;
+begin
+  tmp:=a or b;
+  c<=not tmp;
+  wait on  a,b;
+end process;
+
+wait 语句
+
+wait  on  信号列表；	-- 只能是信号
+	例：wait on  a, b;
+
+wait  until  条件表达式；	-- 必须有信号，但可包含变量、常量
+	例：wait until   a >= b + 2;
+		
+wait  for  时间表达式；	-- 一般是时间常数
+	例：wait for  10 ns;
+
+几点说明
+wait 语句可以放在进程程序区的任何位置，但结果可能有所差异；
+process()
+  variable tmp: bit;
+begin
+  wait for  10 ns;
+  tmp:=a or b;
+  wait until  a=‘1’;
+  c<=not tmp;
+  wait on  a,b;
+end process;
+
+function Min(a,b: Integer) return Integer is
+begin
+  if a<b then
+    return a;
+  else
+    return b;
+  end if;
+end; 
+函数语法格式：
+	function 函数名(入口参数表：数据类型) return 函数数据类型 is 
+	    [函数说明区;]		-- 类型、变量、子程序
+	begin
+	    [函数程序区;] 		-- 顺序语句
+	end [函数名]；
+
+函数说明区可以定义类型、变量，或其它子程序；
+函数程序区只能使用顺序语句；
+函数程序区不能直接引用外部信号，也不能直接赋值给外部信号；
+函数程序区只能通过入口形式参数表间接引用外部信号；
+必须用return语句返回函数值；
+
+子程序重载（Overload）
+	如果相同功能的子程序，只是入口参数类型、数目及/或出口参数类型、数目不同，可以使用相同的子程序名，称为子程序重载 
+function Min(a,b: Real) return Real is
+begin
+  if a<b then
+    return a;
+  else
+    return b;
+  end if;
+end; 
+资源库
+程序包
+常用资源库及其程序包
+Library/Use说明语句
+资源库
+库单元
+程序包
+实体说明
+实体－构造体
+配置
+
+程序包：说明定义一些公用的类型、函数等 
+简单例子：
+
+package my_pack is
+  type int4 is range –8 to 7;
+  type uint4 is range 0 to 15;
+end [my_pack]; 
+
+常用资源库及其程序包
+STD 库
+基本库
+属于VHDL标准本身
+隐式说明
+所含程序包
+Standard ：隐式说明
+Textio ：需显式说明
+
+IEEE 库
+扩展库
+不属于VHDL标准本身
+需显式说明
+所含程序包
+std_logic_1164 ：需显式说明
+std_logic_arith ：需显式说明
+std_logic_signed ：需显式说明
+std_logic_unsigned ：需显式说明
+
+type std_ulogic is( 
+   ’U’,	-- Uninitialized，未初始化状态，或状态未建立（最强的状态）  
+   ’X’,	-- Forcing Unknown，强未知 
+   ’0’,	-- Forcing 0，强0 
+   ’1’,	-- Forcing 1，强1 
+   ’Z’,	-- High Impedence，高阻（最弱的状态） 
+   ’W’,	-- Weak Unknown，弱未知 
+   ’L’,	-- Weak 0，弱0 
+   ’H’,	-- Weak 1，弱1 
+   ’-’);	-- Don’t Care，无关状态（可为以上的任何一种状态）
+
+    *  常用状态：’1’,’0’,’Z’ 
+std_logic
+ std_ulogic的决断子类型
+      	SUBTYPE std_logic IS resolved std_ulogic;
+ std_logic：可为多驱动源信号
+
+    -------------------------------------------------------------------    
+    CONSTANT resolution_table : stdlogic_table := (
+    --      ---------------------------------------------------------
+    --      |  U    X    0    1    Z    W    L    H    -        |   |  
+    --      ---------------------------------------------------------
+            ( 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U', 'U' ), -- | U |
+            ( 'U', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X' ), -- | X |
+            ( 'U', 'X', '0', 'X', '0', '0', '0', '0', 'X' ), -- | 0 |
+            ( 'U', 'X', 'X', '1', '1', '1', '1', '1', 'X' ), -- | 1 |
+            ( 'U', 'X', '0', '1', 'Z', 'W', 'L', 'H', 'X' ), -- | Z |
+            ( 'U', 'X', '0', '1', 'W', 'W', 'W', 'W', 'X' ), -- | W |
+            ( 'U', 'X', '0', '1', 'L', 'W', 'L', 'W', 'X' ), -- | L |
+            ( 'U', 'X', '0', '1', 'H', 'W', 'W', 'H', 'X' ), -- | H |
+            ( 'U', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X' )  -- | - |
+        );
+FUNCTION resolved ( s : std_ulogic_vector ) RETURN std_ulogic IS
+        VARIABLE result : std_ulogic := 'Z';  -- weakest state default
+    BEGIN
+        -- the test for a single driver is essential otherwise the
+        -- loop would return 'X' for a single driver of '-' and that
+        -- would conflict with the value of a single driver unresolved
+        -- signal.
+        IF    (s'LENGTH = 1) THEN    RETURN s(s'LOW);
+        ELSE
+            FOR i IN s'RANGE LOOP
+                result := resolution_table(result, s(i));
+            END LOOP;
+        END IF;
+        RETURN result;
+    END resolved;
+ std_logic_vector：一维数组
+TYPE std_logic_vector IS ARRAY ( NATURAL RANGE <>) OF std_logic;
+
+ 常用转换函数
+	To_bit();		-- std_ulogic,std_logic;
+	To_bitvector();	-- std_ulogic_vector,
+				-- std_logic_vector;
+	To_stdulogic();	-- bit;
+	To_stdulogicvector();	-- bit_vector,
+				-- std_logic_vector;
+	To_stdlogicvector();	-- bit_vector,
+				-- std_ulogic_vector;
+ std_logic_vector：一维数组
+TYPE std_logic_vector IS ARRAY ( NATURAL RANGE <>) OF std_logic;
+
+ 常用转换函数
+	To_bit();		-- std_ulogic,std_logic;
+	To_bitvector();	-- std_ulogic_vector,
+				-- std_logic_vector;
+	To_stdulogic();	-- bit;
+	To_stdulogicvector();	-- bit_vector,
+				-- std_logic_vector;
+	To_stdlogicvector();	-- bit_vector,
+				-- std_ulogic_vector;
+WORK库：当前工作库
+自定义库：取决于具体的VHDL编译系统
+Library/Use说明语句
+Library 语句
+例：
+Library IEEE，My_lib；
+隐含说明：
+library std; 
+library work;  
+Use语句
+例：
+Use	ieee.std_logic_1164.all; 
+Use	work.my_pack.all; 
+Use ieee.std_logic_1164.std_ulogic; 
+隐含说明：
+use std.standard.all; 
+
+VHDL设计中的常用组合: 
+	
+	Library ieee; 
+	Use ieee.std_logic_1164.all; 
+	Use ieee.std_logic_arith.all; 
+	Use ieee.std_logic_signed.all; 
+（或Use ieee.std_logic_unsigned.all; )
+	Use work.your_pack.all; 
+
+
+
+
