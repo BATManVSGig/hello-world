@@ -1,19 +1,5 @@
-倪干  |   消息 (1078) | English
 
-首页
-团队
-博客
-论坛
-知道
-微博
-更多
-我的主页
-百科
-
-搜索词条
- 搜 索 网站帮助 热门标签
-当前位置：百科 > 技术 |Technology > 研发工具 |Development tools > 软件开发工具 > 搭建基于Gerrit、Jenkins、Git的CI环境
-搭建基于Gerrit、Jenkins、Git的CI环境	    赞(6)   编辑词条 发表评论(1)  浏览 (2415)   转发到微博 转发到微博 (0)  创建时间2014-11-27 10:37
+搭建基于Gerrit、Jenkins、Git的CI环境	   
 目录
 概要
 集成前准备
@@ -251,7 +237,7 @@ Username和E-mail是之前在安装配置gerrit时，在Gerrit中注册的"jenki
 建议developer在gerrit注册的用户名、ssh public key与在github上注册的用户名、ssh publich key保持一致。
  
 [ 编辑本段 ]   [ 回目录 ]安装git   
-安装git，请参考：http://3ms.huawei.com/hi/wiki/11296179.html?for_statistic_from=my_space_wiki
+安装git，
  
 [ 编辑本段 ]   [ 回目录 ]安装git review   
 下载git review
@@ -306,24 +292,9 @@ java代码
 github本身无需做什么配置，只是为开发人员注册账号，并配置好ssh public key即可。
  
  
-收藏18分享1
-分类：  技术 |Technology  研发工具 |Development tools  软件开发工具 标签： CI, gerrit, jenkins, git  [ 编辑 ]    
-上一篇[Gerrit] Linux下安装Gerrit
-结温下一篇
-发表评论	
-提交评论
 
-等级:
-1楼 蒋旭 发表于  2017-06-29 20:10
-好文 回复
-词条信息
- 谢俊 
-等级：
-贡献：898
-浏览：2415
-编辑数：21    历史版本
-编辑时间：2014-11-28 12:00
-版权所有 © 华为技术有限公司 1998 - 2018 保留一切权利 关于社区 | 新手入门 | 在线帮助 | 意见&建议 | 联系客服
+
+
 
 
 
