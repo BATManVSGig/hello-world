@@ -1,0 +1,1101 @@
+倪干  |   消息 (1078) | English
+
+首页
+团队
+博客
+论坛
+知道
+微博
+更多
+我的主页
+百科
+
+搜索词条
+ 搜 索 网站帮助 热门标签
+当前位置：百科 > 技术 |Technology > 研发工具 |Development tools > 软件开发工具 > 搭建基于Gerrit、Jenkins、Git的CI环境
+搭建基于Gerrit、Jenkins、Git的CI环境	    赞(6)   编辑词条 发表评论(1)  浏览 (2415)   转发到微博 转发到微博 (0)  创建时间2014-11-27 10:37
+目录
+概要
+集成前准备
+Gerrit的集成配置
+用户配置
+[显示全部]
+[ 编辑本段 ]   [ 回目录 ]概要   
+本文的目的是搭建一个CI系统，这个CI系统使用现成的github网站作为托管代码，如：github.com或者我司内源网站rnd-github.huawei.com.
+用户需要手工搭建的是Gerrit，用来作为代码review的工具，并且作为一个CI触发入口，一旦有新代码提交，就触发CI系统对新代码进行验证；
+另外一个需要手工搭建的是Jenkins，用来做CI服务器，用来构建代码，执行测试用例，验证代码。
+所以，要搭建这样一个CI系统，必须集成github/gerrit/jenkins/developer clinet这四部分。
+ 
+
+ 
+[ 编辑本段 ]   [ 回目录 ]集成前准备   
+在集成之前，需要先完成以下几项：
+在github上已经创建好项目。- 如何在github上创建项目，请参考github的help：https://help.github.com/
+已经安装好Gerrit服务器。- 如何安装gerrit服务器，请参考：http://3ms.huawei.com/hi/wiki/11296185.html?for_statistic_from=my_space_wiki
+已经安装好Jenkins服务器。- 如何安装Jenkins服务器，请参考：http://3ms.huawei.com/hi/wiki/11296181.html?for_statistic_from=my_space_wiki
+在developer的机器，安装好git。如何安装git，请参考：http://3ms.huawei.com/hi/wiki/11296179.html?for_statistic_from=my_space_wiki
+对于在公司内网，想搭建一个这样的CI，由于不能往外上传代码，所以，建议不要使用github，而是使用公司的内源网站：http://rnd-github.huawei.com
+ 
+完成好上面的准备工作后，可以进行集成设置了。
+ 
+[ 编辑本段 ]   [ 回目录 ]Gerrit的集成配置   
+为了与其他模块配合，需要在gerrit中做以下事情：
+为各角色创建用户，并做访问控制；
+为了跟踪项目，需要创建一个与github上同名的项目；
+为了与中心仓库交互，需要安装replication插件，用来复制分发代码；
+为了与jenkins交互，需要创建jenkins用户，并赋予verify权限；
+[ 编辑本段 ]   [ 回目录 ]用户配置   
+Jenkins用户配置
+在gerrit中创建名为“jenkins”的用户
+请在gerrit 的web页面为自动化Verfiy的Jenkins系统创建用户:“jenkins”（也可以命名为jenkins-admin, openstack的review系统就是I这么命名的）
+“jenkins”用户用来作为自动化CI任务给patch打分的系统用户使用。
+创建方法请参考Gerrit安装一文中的创建方法，包含用htpasswd2工具生成http认证；在gerrit页面注册用户；添加邮箱；生成ssh秘钥对；添加公钥等配置。
+ 
+添加jenkins用户到执行批任务的“Non-Interactive Users “用户组中
+将jenkins添加到Group Non-Interactive Users 用户组中。
+后续在项目的访问控制中，将授权此用户组有verfiy权限，用来在自动化执行完毕后，给patch打verfiy分数。
+
+ 
+core team配置
+为核心组创建用户组：“core team”
+
+ 
+创建core team用户，请参考前面介绍的创建用户的方法。
+为“core team”添加用户，在“core team”用户组下的用户，会拥有此用户组的访问控制权。
+后续为项目配置访问控制时，为此组添加code review +2/-2权限，以及verfy权限和submit权限。
+
+ 
+developer配置
+gerrit系统默认有一个用户组Registered Users，所有的登录用户，都是属于这个用户组，所以，我们在后续为这个用户组添加“code review”的访问权限，就意味着所有登录用户就是devepler角色了，能够进行代码review.
+在项目的访问控制配置中，为”Registered Users“组配置code review +1/-1权限。
+所以，对于普通developer来说，并不需要特别配置用户组。
+即，只要创建、注册了gerrit用户，此用户即属于developer用户组。
+ 
+ 
+[ 编辑本段 ]   [ 回目录 ]项目配置   
+创建项目
+为需要管理的github项目创建gerrit review项目
+使用admin账号ssh登录创建项目，注意这里的项目名，需要与github上的项目名保持一致。
+使用admin账号ssh方式登录gerrit服务器前，请配置admin用户的ssh秘钥对。
+创建项目方法如下：
+# su - gerrit
+# ssh -p 39418 admin@10.67.148.223 gerrit create-project <PROJECT_NAME> 
+项目将被创建到gerrit用户的~/<GERRIT_SITE>/git/<PROJECT_NAME>目录下, 如：~/<GERRIT_SITE>/git/<PROJECT_NAME>.git。
+使用gerrit账号登录gerrit服务器单板
+# rm -rf ~/<GERRIT_SITE>/git/<PROJECT_NAME>.git
+# cd ~/<GERRIT_SITE>/git/
+# git clone --bare <GITHUB_CODE_SSH_ADDRESS>
+此时通过浏览器，在project页面，就可以点击"Projects->list"查看我们创建的project了。
+ 
+[ 编辑本段 ]   [ 回目录 ]项目访问控制配置   
+在"Projects->list"下选择要配置访问控制的项目，如下：
+
+ 
+进入如下页面，由于所有的项目都继承”All-Projects“的访问控制，为了简单，这里介绍配置All-Projects的访问控制来影响我们的项目的例子。
+点击”Access->All-Projects“，以便对访问控制进行配置。
+
+ 
+点击”Edit“页面，配置如下：
+为”core team“用户组配置：
+refs/heads/*->Label Code-Review +2/-2；（只有code-review +2的代码，才能submit）
+refs/heads/*->Label Verifiied +1/-1;  (能够verify代码，只有verify +1的代码，才能submit）
+refs/heads/*->Submit; （Submit后，代码会merge到中心仓库）
+为”Registered User“用户组配置：
+refs/*->Forge Author Identity;
+refs/for/refs/*->Push; （提交代码的权限）
+refs/heads/*->Label Code-Review +1/-1; （普通用户review代码的权限）
+为”Non-Interactive Users“用户组配置：
+refs/heads/*->Label Verified +1/-1; （能够verify代码，只有verify +1的代码，才能submit。这个用户组是给Jenkins编译执行测试后，自动Verify +1用的）
+
+ 
+[ 编辑本段 ]   [ 回目录 ]安装配置replication.plugin插件   
+如果不安装replication插件，submit后，代码知会merge到gerrit的local repo中，需要使用此插件，将merge的代码同步复制分发到插件配置的仓库中。
+安装过程如下： 
+此插件已包含在运行包中，解压即可获得，解压后，需要拷贝到"GERRIT_SITE_DIR/plugins"目录下，如下：
+java代码
+# unzip -j gerrit-full-2.5.2.war WEB-INF/plugins/replication.jar
+# cp replication.jar <SITE_DIR>/plugins/
+使用gerrit命令添加plugin，如下：
+bash代码
+# ssh hw_gerrit gerrit plugin install /home/gerrit/ok_site/plugins/replication.jar
+
+hw_gerrit是在~/.ssh/config中配置的ssh快捷方式，需要提前配置，配置方法如下：
+bash代码
+# vi ~/.ssh/config
+Host hw_gerrit
+          User admin
+          Port 39418
+          Hostname 10.67.148.223
+          IdentityFile ~/.ssh/id_rsa
+在”<SITE_DIR>/etc/“目录添加replication.config配置文件，配置分发复制规则，添加后，需要reload生效，并且重启gerrit服务器，如下：
+java代码
+# vi <SITE_DIR>/etc/replication.config
+[remote "rnd-github.huawei.com"]
+  projects = OKLib
+  url = git@rnd-github.huawei.com:x00177014/${name}.git
+  push = +refs/heads/*:refs/heads/*
+  push = +refs/tags/*:refs/tags/*
+  push = +refs/changes/*:refs/changes/*
+  threads = 3
+# ssh hw_gerrit gerrit plugin reload replication
+
+# cd <site_dir>/bin
+# ./gerrit.sh stop -d <site_dir>
+# ./gerrit.sh start -d <site_dir>
+如果replication.config有修改，可以执行如下命令刷新：
+# ssh hw_gerrit gerrit plugin reload replication
+ 
+[ 编辑本段 ]   [ 回目录 ]Gerrit集成配置回顾   
+在集成配置gerrit过程中，我们做了如下事情：
+为github上的项目在gerrit上创建了一个同名的跟踪项目；
+建立了不同的用户组，用来区分gerrit中的不同角色；
+为项目配置了访问控制，定义和限制了不同角色能够进行的操作；
+为Jenkins系统创建了一个名为"jenkins"的用户；
+安装部署配置了traplication plugin，定义了merge代码后，需要同步复制的中心仓库；
+ 
+[ 编辑本段 ]   [ 回目录 ]Jenkins集成配置   
+在集成配置jenkins，我们需要完成jenkins的安装，安装过程，请参考本文最前面给出的链接。
+在安装过后，在jenkins server的机器上，应该完成了JDK/Git/Jenkins的安装，我们接下来的工作，只是完成jenkins对gerrit的集成配置即可。
+在集成配置的过程中，主要包括以下几个工作：
+安装与系统其他组件交互的插件
+配置Gerrit Triggle
+新建CI任务
+编写编译脚本，在编译脚本中执行测试工程。
+ 
+[ 编辑本段 ]   [ 回目录 ]安装与其他组件交互的插件   
+安装与gerrit的交互的插件：gerrit triggle插件
+安装与git交互的插件：git clinet插件
+安装ssh的插件：ssh-credentials插件
+安装定时任务的插件：scm-api插件
+ 
+需要的所有插件列表如下：
+scm-api.hpi
+git-client.hpi
+git.hpi
+ssh-agent.hpi
+gerrit-trigger.hpi
+ssh-credentials.hpi
+credentials.hpi
+安装方法
+点击”系统管理->管理插件“，进入插件管理页面。
+
+ 
+点击”可选插件“tab，选择需要安装的插件，如果插件过多，可以使用右上方的过滤工具，输入想要安装的插件名字，过滤插件。
+
+ 
+ 
+如果使用上述方法，无法下载插件或者无法找到插件，可以手工下载插件，并使用下面方法手工上传插件。
+插件下载的地址为：http://updates.jenkins-ci.org/download/plugins/
+插件的格式为.hpi格式。
+手工上传方法
+点击”高级“tab，进入插件上传页面，如下图：
+
+点击”选择文件“，进行插件选择，点击”上传“按钮上传插件，如下图：
+
+ 
+插件下载上传完毕后，重启Jenkins，即可在已安装页面看到安装过的插件，并生效插件。
+ 
+[ 编辑本段 ]   [ 回目录 ]配置Gerrit Triggle   
+点击”系统管理->Gerrit Trigger“，进入Gerrit Trigger配置页面。
+
+ 
+点击”Add New Server“链接，进入新建服务器页面。
+
+在新建服务器页面，填写New Server名字，可以是IP地址，也可以自己起名字，点击选择默认配置的Gerrit Server选项。
+
+点击”OK“按钮后，进入服务器配置页面，参考如下配置填写。
+特别说明下，Frontend URL是通过此URL访问Gerrit Web页面的地址。
+Username和E-mail是之前在安装配置gerrit时，在Gerrit中注册的"jenkins"用户的用户名和邮箱，还需要填写"jenkins"用户的私钥，公钥在配置gerrit用户时，已经配置到gerrit中。
+配置完成后，请点击Test Connection进行测试，测试成功后，请下拉到页面最下面，点击"SAVE"按钮保存配置。
+
+点击”SAVE“保存后，点击”Start“按钮，启动与Gerrit Server的连接，如下图：
+
+ 
+至此，完成了Server Trigger的配置。
+ 
+[ 编辑本段 ]   [ 回目录 ]建立CI任务   
+进入Jenkins主页，点击”新建“，进入新建项目页面。
+在新页面中，填写"Item名称"， 选择”构建一个自由风格的软件项目“，点击最下面的”OK“按钮。
+ 
+
+ 
+点击”OK“按钮后，将进入项目配置页面，在本文，只关注如下几块设置”源码管理“、”构建触发器“、”构建“三块。
+ 
+”源码管理“配置块
+源码管理配置块，将定义本项目执行时，获取源代码的地址和用户，以及使用的Branches等配置。
+按照该下图配置源码管理配置块，注意其中”Repository URL“配置的是Gerrit服务器上的git代码库地址。
+
+ 
+”构建触发器“配置块
+选择”Gerrit event“, 按照如下图配置进行配置。
+在”Gerrit Project“中，project的"type"选择”Plain“, “pattern ”填写项目名称；branch中的”type“选择”Path“，Pattern填写*号。
+此外，别忘记在Trigger on中，添加”Draft Published“和”Patchset Created“2个触发器。此2个trigger表示一旦上传代码或者上传patch，就会触发构建。
+
+ 
+”构建“配置块
+在”构建“配置块中，点击”增加构建步骤“，选择”Execute shell“，如下图：
+
+ 
+在Cpmmand中，填写已经上传到服务器上的构建脚本。
+构建脚本完成代码的编译和测试用例的执行。
+
+点击”保存“按钮，即完成了CI Project的创建。
+ 
+[ 编辑本段 ]   [ 回目录 ]Developer客户端配置   
+开发人员的开发端配置，需要完成如下的事情：
+需要安装git，用来管理local repo，进行本地代码管理；
+需要安装git review，用来进行与gerrit互动，提交代码review；
+需要开发人员在github上注册用户，并上传ssh public key；
+需要在本地配置git用户和邮箱，以及ssh private key；
+需要配置gerrit的remote库，用于提交review的gerrit用户, 以及配置gerrit用户的ssh private key；
+建议developer在gerrit注册的用户名、ssh public key与在github上注册的用户名、ssh publich key保持一致。
+ 
+[ 编辑本段 ]   [ 回目录 ]安装git   
+安装git，请参考：http://3ms.huawei.com/hi/wiki/11296179.html?for_statistic_from=my_space_wiki
+ 
+[ 编辑本段 ]   [ 回目录 ]安装git review   
+下载git review
+git review下载地址：https://pypi.python.org/pypi/git-review
+ 
+安装git review
+上传git review的源码包（如：git-review-1.24.tar.gz）到开发者的机器。
+解压，进入源码目录，执行”python setup.py install“即可完成安装。
+如下：
+bash代码
+# tar -zxvf git-review-1.24.tar.gz
+# cd git-review-1.24/
+# python setup.py install
+ 
+[ 编辑本段 ]   [ 回目录 ]在github上注册用户   
+在github网站上注册用户；
+生成ssh秘钥对，并且将公钥上传到github上；
+ 
+在Gerrit上创建用户和注册用户
+创建用户参考：http://3ms.huawei.com/hi/wiki/11296185.html?for_statistic_from=my_space_wiki#11
+注册用户参考：http://3ms.huawei.com/hi/wiki/11296185.html?for_statistic_from=my_space_wiki#17
+ 
+注意：建议在Github上注册的用户名、邮箱、public-key与在Gerrit上创建和注册的用户名、邮箱、public-key保持一致。
+ 
+[ 编辑本段 ]   [ 回目录 ]配置本地开发环境   
+使用开发人员账号，登录linux环境，执行以下操作：
+java代码
+1、使用开发人员账号登录，配置git账号
+# su - x00177014
+# git config --global user.name "x00177014"
+# git config --global user.email "nash.xiejun@huawei.com"
+
+2、生成ssh秘钥对，添加到github和gerrit网站上。如果已经有秘钥对了，将私钥拷贝到~/.ssh/目录下即可。
+# key-keygen
+将公钥“~/.ssh/id_rsa.pub”的内容添加到github、gerrit上。
+
+3、创建工作目录，克隆github上的工程
+# cd ~
+# mkdir workspace
+# cd workspace
+# git clone git@rnd-github.huawei.com:x00177014/OKLib.git
+
+4、进入工程目录，配置gerrit review账号和地址库
+# cd OKLib 
+# git config --global gitreview.username x00177014
+# git remote add gerrit ssh://x00177014@10.67.148.223:39418/OKLib.git
+
+5、执行gerrit review -s指令，添加message钩子
+# git review -s
+ 
+[ 编辑本段 ]   [ 回目录 ]GitHub的集成配置   
+github本身无需做什么配置，只是为开发人员注册账号，并配置好ssh public key即可。
+ 
+ 
+收藏18分享1
+分类：  技术 |Technology  研发工具 |Development tools  软件开发工具 标签： CI, gerrit, jenkins, git  [ 编辑 ]    
+上一篇[Gerrit] Linux下安装Gerrit
+结温下一篇
+发表评论	
+提交评论
+
+等级:
+1楼 蒋旭 发表于  2017-06-29 20:10
+好文 回复
+词条信息
+ 谢俊 
+等级：
+贡献：898
+浏览：2415
+编辑数：21    历史版本
+编辑时间：2014-11-28 12:00
+版权所有 © 华为技术有限公司 1998 - 2018 保留一切权利 关于社区 | 新手入门 | 在线帮助 | 意见&建议 | 联系客服
+
+
+
+-----------------------------------------------Dev CI工程搭建指南
+Revision record 修订记录
+Date
+日期	Revision Version
+修订
+版本	CR ID / Defect ID
+CR号	Section Number
+修改
+章节	Change Description
+修改描述	Author
+作者
+崔杨杨/00214989
+田小龙/t00345362
+					
+					
+					
+					
+					
+					
+					
+ 
+
+目  录
+目  录	3
+版本编译手册模板	6
+1 简介	6
+1.1 目的	6
+1.2 适用范围	6
+1.3 概述	6
+2 搭建编译环境	6
+2.1 编译环境要求以及准备工作	6
+2.2 获取软件包	6
+2.2.1 Linux下通用工具列表	6
+2.3 Linux初始化设置	7
+2.3.1 挂载磁盘	7
+2.4 环境变量配置	10
+3 通用编译工具指导	10
+3.1 安装工具	10
+3.1.1 JDK工具	10
+3.1.2 Maven工具	11
+3.1.3 Ant工具	12
+3.1.4 Jenkins工具	14
+4 Jenkins 配置	14
+4.1 Jenkins初探	14
+4.1.1 系统设置	14
+4.1.2 新建项目	16
+4.2 插件安装	17
+4.2.1 插件安装方式	17
+4.2.2 插件安装问题	18
+4.3 Git配置	19
+4.3.1 Jenkins中Git设置	19
+4.3.2 在项目中对接gitlab	19
+4.3.3 Jenkins监控Gitlab状态	20
+4.4 构建	23
+4.4.1 参数化构建	23
+4.5 Pmd checkstyle findbugs	23
+4.5.1 静态检查插件设置	23
+4.5.2 在jenkins中执行静态检查	25
+4.6 CodeCC配置	26
+4.6.1 部署工具	26
+4.6.2 部署jenkins插件	28
+4.6.3 配置jenkins插件	29
+4.7 Email配置	31
+4.7.1 配置SMTP	31
+4.7.2 在项目中配置Email通知	31
+4.8 安全配置	32
+4.8.1 LDAP配置	32
+4.8.2 安全矩阵配置	34
+4.9 节点管理	35
+4.9.1 创建windows	35
+4.9.2 创建linux节点	37
+5 配置SonarQube进行持续审查	38
+5.1 SonarQube安装配置	38
+5.1.1 下载软件	38
+5.1.2 准备好数据库	39
+5.1.3 安装sonarqube、sonar-runner	39
+5.2 SonarQube使用	42
+5.2.1 插件配置使用	42
+5.2.2 常见错误及解决方法	44
+5.3 与jenkins集成	45
+5.3.1 通过Maven进行集成	45
+5.3.2 直接与Jenkins集成	46
+5.4 Sonar-runner配置	48
+5.4.1 下载Sonar-Runner	48
+5.4.2 配置Sonar-Runner环境变量	48
+6 仓库管理Nexus搭建	48
+6.1 Nexus安装与卸载	49
+6.1.1 Nexus安装	49
+6.1.2 登录nexus	49
+6.1.3 Nexus卸载	51
+6.1.4 War包方式安装	51
+6.2 Nexus使用	51
+6.2.1 修改部署密码	51
+6.2.2 添加代理资源仓库	52
+6.2.3 上传软件包	54
+6.2.4 浏览系统信息源	55
+6.2.5 设置定时任务	55
+6.3 配置maven使用nexus	58
+6.3.1 设置nexus镜像	58
+6.3.2 使用nexus做为快照/发布版本仓库	59
+6.3.3 构件部署设置	60
+ 
+版本编译手册模板
+关键词： 
+摘要： 
+缩略语清单：
+缩略语	英文全名	中文解释
+		
+		
+		
+		
+
+1 简介
+1.1 目的
+1.2 适用范围
+本手册适用于公有云各个组做构建编译。
+1.3 概述
+本文描述了编译和质量检查的环境搭建，工程构建，编译打包过程。
+2 搭建编译环境
+2.1 编译环境要求以及准备工作
+操作系统：SLES-11-SP3-DVD-x86_64
+虚拟机规格：4u6G  硬盘至少大于80G
+a.准备虚拟机
+b.装载操作系统，确保安装gcc编译工具
+c.配置网络（便于操作）
+2.2 获取软件包
+2.2.1 Linux下通用工具列表
+
+工具名称	工具类型	功能	版本	下载路径
+Suse OS	采购	操作系统	11SP3	
+Sonatype
+Nexus	免费	管理构建产物	2.10.0-02
+(nexus-2.10.0-02-bundle.zip)	http://www.sonatype.org/nexus/archived/ 
+
+JDK	免费	Java代码编译基础环境	1.7.71（或官方1.7最新版本）(jdk-7u71-linux-i586.rpm）	http://www.oracle.com/technetwork/java/javase/downloads/index.html
+
+Maven	开源	Java代码编译工具	3.0.5（apache-maven-3.0.5-bin.tar.gz）	http://maven.apache.org/download.cgi 
+
+Ant	开源	Java代码编译工具	1.9.4（apache-ant-1.9.4-bin.tar.gz）	http://ant.apache.org/bindownload.cgi
+
+Jenkins	开源	持续集成工具	1.580.1
+（或官方LST最新版本）(jenkins.war)	http://jenkins-ci.org/ 
+
+7zip	开源	压缩工具	9.20.1（p7zip_9.20.1_src_all.tar.bz2）	http://sourceforge.net/projects/p7zip/?source=directory 
+
+Ant-contrib	开源	Ant依赖库	1.0b3
+(ant-contrib-1.0b3-bin.zip)	http://sourceforge.net/projects/ant-contrib/files/
+
+Linux-PAM	开源	加密工具	1.1.8
+(Linux-PAM-1.1.8.tar.bz2)	http://www.linux-pam.org/library/Linux-PAM-1.1.8.tar.bz2
+
+SonarQube	开源	代码质量管理平台	4.5.4
+(SonarQube 4.5.4 (LTS) )	http://www.sonarqube.org/downloads/ 
+
+
+2.3 Linux初始化设置
+检查版本信息  uname -n
+ 
+创建软件包存放路径    /opt/jenkins/software/
+创建CI编译文件夹    /opt/jenkins/ci
+2.3.1 挂载磁盘
+fdisk -l 查看所有磁盘：
+ 
+格式化磁盘：
+ 
+ 
+mount 挂载磁盘：
+# mkdir /ci 创建一个目录(类似MSDOS下的md命令)
+# mount  dev/xvde /ci 加载指定的文件系统
+开机自动挂载：
+参考资料：fstab详解  http://ckc620.blog.51cto.com/631254/394238/ 
+vim /etc/fstab
+添加：
+/dev/xvde  /ci  xt3  defaults  1  1
+分别代表：
+　　待挂载的磁盘   挂载点   文件系统类型   参数   是否备份   是否开机检查
+采用ftp工具将需要安装的软件包copy到/opt/jenkins/software/上
+ 
+2.4 环境变量配置
+后期可增加
+3 通用编译工具指导
+3.1 安装工具
+3.1.1 JDK工具
+a)	对编译工具做的调整
+无
+b)	获取JDK7u71版本（或官方1.7最新版本7u71rpm）
+http://www.oracle.com/technetwork/java/javase/downloads/index.html
+ 
+ 
+c)	安装
+ 
+3.1.2 Maven工具
+a)	对编译工具做的调整
+无
+b)	获取
+http://maven.apache.org/download.cgi
+ 
+c)	安装
+ 
+ 
+ 
+3.1.3 Ant工具
+a)	对编译工具做的调整
+无
+b)	获取Ant
+http://ant.apache.org/bindownload.cgi
+c)	安装Ant
+ 
+d)	安装AntContrib 
+	http://sourceforge.net/projects/ant-contrib/files/
+ 
+
+	将解压后的jar包放置到指定的位置
+mv ant-contrib/* ../apache-ant-1.9.4/lib 
+ 导入环境变量
+配置JDK 、ant、 maven环境变量，将各自的安装路径填写到下面信息中
+
+将上面的环境变量编辑成如下添加到 /etc/profile文件中
+export LC_CTYPE="en_US.UTF-8"
+export ANT_HOME=/opt/jenkins/apache-ant-1.9.4
+export JAVA_HOME=/usr/java/default
+export MAVEN_HOME=/opt/jenkins/apache-maven-3.0.5
+export PATH=$MAVEN_HOME/bin:$ANT_HOME/bin:$JAVA_HOME/bin:$PATH
+添加完后：
+ 
+验证环境变量生效  xshell 重新登陆后输入
+ 
+基础工具安装完成,其余工具安装请自行百度之
+3.1.4 Jenkins工具
+	对编译工具做的调整
+无
+	获取
+http://jenkins-ci.org/
+
+ 
+	安装
+	下载apache-tomcat-6.0.39，放置到/ci 目录下：
+	将jenkins.war放置到/ci/apache-tomcat-6.0.39/webapps 文件夹下
+	添加环境变量：
+vim /etc/profile
+export JENKINS_HOME=/ci/Jenkins
+export PATH=$MAVEN_HOME/bin:$ANT_HOME/bin:$JAVA_HOME/bin:$JENKINS_HOME:$GRADLE_HOME/bin:$PATH
+source /etc/profile
+	启动tomcat ，
+/ci/apache-tomcat-6.0.39/bin
+/ci/apache-tomcat-6.0.39/bin # sh startup.sh
+查看 生成jenkins文件夹
+ 
+4 Jenkins 配置
+4.1 Jenkins初探
+4.1.1 系统设置
+系统配置：
+ 
+查看主目录是否是设置的java_home
+ 
+
+填写新增JDK Ant Maven的环境变量，不勾选“自动安装”：
+ 
+
+4.1.2 新建项目
+以创建一个Ant项目为例：
+	新建一个自由风格的项目
+ 
+	配置Ant
+a)	在系统管理 -> 系统设置中设置Ant环境变量：
+  
+>>>
+ 
+b)	配置job的时候，构建步骤选择Inovoke Ant
+  
+>>>
+ 
+Ant Version 不能选择Default，自己起一个名字。
+4.2 插件安装
+4.2.1 插件安装方式
+Jenkins插件两种安装方式:
+1)	在线安装:
+由于外网限制问题，在线安装一直存在问题，目前主要还是手动安装。
+在系统管理- >管理插件 ->可选插件，ctr+v搜索需要的插件，选中，然后直接安装：
+ 
+ 
+2）手动安装:
+	手动下载插件：
+http://updates.jenkins-ci.org/download/plugins/ 	
+https://wiki.jenkins-ci.org/display/JENKINS/Plugins
+Chrome打开的话，直接点击；用IE打开的话，右击另存.
+	通过jenkins主页：系统管理 -> 管理插件 -> 可选插件/高级, 直接上传插件：
+ 
+	将下载的插件文件（*.hpi/*.jpi)放到 $JENKINS_HOME/plugins下面，重启jenkins
+重启jenkins方法：在地址栏输入ip:port/jenkins/restart
+4.2.2 插件安装问题
+以git插件安装为例，手动安装插件：
+ 
+选择下载的插件，比如：git插件，插件文件以.hbi为后缀，可以去http://updates.jenkins-ci.org/download/plugins/ 下载，
+若安装出现错误，如： 
+点击“详细”查看
+ 
+下载依赖插件，安装。
+4.3 Git配置
+4.3.1 Jenkins中Git设置
+在系统管理 – >系统设置中，安装Git，选择Git而不是JGit；
+ 
+	
+4.3.2 在项目中对接gitlab
+ 
+	 
+	Add：
+	 
+4.3.3 Jenkins监控Gitlab状态
+在Gitlab需要设置web hook：
+项目：Settings
+ 
+ 
+Web Hooks：
+ 
+
+  安装插件gitlab-hook/gitlab-plugin
+  配置插件：
+ 
+ 
+ 
+ 
+  配置Job：
+ 
+4.4 构建
+4.4.1 参数化构建
+ 
+ 
+4.5 Pmd checkstyle findbugs
+4.5.1 静态检查插件设置
+执行静态检查需要在maven项目中添加相关依赖,静态检查结果的展示需要jenkins安装相关插件,这些插件会收集指定位置的检测报告:
+1、	安装pmd/checkstyle/findbugs插件；
+2、	在项目POM文件中声明使用pmd、checkstyle、findbugs插件生成静态检查报告：蓝色部分依自己情况设置
+<plugins>
+		<plugin>  
+			<artifactId>maven-compiler-plugin</artifactId>
+			<version>2.3.2</version>
+			<configuration>
+				<source>1.7</source>
+				<target>1.7</target>
+				<encoding>UTF-8</encoding>
+			</configuration> 
+		</plugin>  
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-eclipse-plugin</artifactId>
+			<version>2.9</version>
+		</plugin>
+		<!--使用IT产品线checkstyle检查模板  -->
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-checkstyle-plugin</artifactId>
+			<configuration>
+				<configLocation>
+					/ci/jenkins/codestandard/checkstyle_ruleset_minimal_IT_product_line.xml
+				</configLocation>
+			</configuration>
+			<version>2.9.1</version>
+		</plugin>
+		<!--使用IT产品线pmd检查模板  -->
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-pmd-plugin</artifactId>
+			<configuration>
+				<configLocation>
+					/ci/jenkins/codestandard/pmd_ruleset_minimal_IT_product_line.xml
+				</configLocation>
+				<linkXRef>false</linkXRef>
+				<sourceEncoding>utf-8</sourceEncoding>
+				<minimumTokens>100</minimumTokens>
+				<targetJdk>1.6</targetJdk>
+				<verbose>true</verbose>
+			</configuration>
+			<version>2.7.1</version>
+		</plugin>
+		<!--使用IT产品线findbugs检查模板  -->
+		<plugin>
+			<groupId>org.codehaus.mojo</groupId>
+			<artifactId>findbugs-maven-plugin</artifactId>
+			<configuration>
+				<configLocation>
+					/ci/jenkins/codestandard/findbugs_ruleset_minimal_IT_product_line.xml
+				</configLocation>
+		<canGenerateReport>true</canGenerateReport>					                                      <xmlOutput>true</xmlOutput>
+				<excludeFilterFile>
+					/ci/jenkins/codestandard/findbugs_exclude.xml
+				</excludeFilterFile>
+			</configuration>
+			<version>2.3.2</version>
+		</plugin>
+	</plugins>
+4.5.2 在jenkins中执行静态检查
+ 
+ 
+最终效果：
+ 
+4.6 CodeCC配置
+4.6.1 部署工具
+http://rnd-codecc.huawei.com/queue-web/Forward.do?formId=download
+下载工具：此处采用32位 windows2003的机器
+ 
+机器部署：
+ 
+ 
+配置fortify  path
+ 
+4.6.2 部署jenkins插件
+http://10.78.150.240/download/plugins/ 
+ 
+4.6.3 配置jenkins插件
+新建工程，配置PBI信息 必须配置
+ 
+ 
+ 
+参考bat脚本
+  
+4.7 Email配置
+4.7.1 配置SMTP
+ 
+4.7.2 在项目中配置Email通知
+需要安装Email Extension Plugin插件。
+ 
+4.8 安全配置
+4.8.1 LDAP配置
+http://3ms.huawei.com/hi/group/6373/wiki_3166341.html?for_statistic_from=all_group_wiki 
+1.	用户权限配置管理界面如下所示，选择“启用安全”，保存。
+  
+2.	启用安全之后进入如下实际的配置界面，首先要配置的是LDAP服务，LDAP的服务主要有以下几块：
+服务器：ldap://lggad03-dc.huawei.com
+Allow blank rootDN:勾选
+User search base: DC=china,DC=huawei,DC=com
+用户搜索过滤器：(sAMAccountName={0})
+Group search base: OU=CorpUsers,DC=china,DC=huawei,DC=com
+Manager DN: ICPAppAccount
+管理密码：passwd02!
+ 
+
+在LDAP服务器不可用的情况下，可以使用Jenkins专有数据库：
+  
+4.8.2 安全矩阵配置
+ 
+4.9 节点管理
+4.9.1 创建windows
+ 
+ 
+在做则可以看到添加的节点：
+ 
+ 
+ 
+表示联通，接着：
+ 
+ 
+4.9.2 创建linux节点
+ 
+ 
+ 
+ 
+5 配置SonarQube进行持续审查
+Sonar是一个用于代码质量管理的开源平台，用于管理Java源代码的质量。通过插件机制，Sonar 可以集成不同的测试工具，代码分析工具，以及持续集成工具，比如pmd-cpd、checkstyle、findbugs、Jenkins。通过不同的插件对这些结果进行再加工处理，通过量化的方式度量代码质量的变化，从而可以方便地对不同规模和种类的工程进行代码质量管理。
+同时 Sonar 还对大量的持续集成工具提供了接口支持，可以很方便地在持续集成中使用 Sonar。此外，Sonar 的插件还可以对 Java 以外的其他编程语言提供支持，对国际化以及报告文档化也有良好的支持。
+本文以操作系统为例介绍Sonar的安装配置，以及如何与Jenkins进行集成，通过pmd-cpd、checkstyle、findbugs等工具对代码进行持续审查。
+5.1 SonarQube安装配置
+5.1.1 下载软件
+sonarqube-4.5.4.zip：
+http://www.sonarqube.org/downloads/ 
+sonar-runner-dist-2.4.zip：
+http://www.sonarqube.org/downloads/ 
+MySql：
+http://dev.mysql.com/downloads/mysql/ 
+5.1.2 准备好数据库
+	安装Mysql
+安装Mysql时可以选择安装mysql-client、mysql-server，前者只是一个客户端，只提供了sql脚本和某个服务器交互的功能，只是安装它的话，还需要一台已经配置好的Mysql服务器；选择安装后者的话，会同时安装mysql-client
+	Ubuntu安装Mysql
+sudo apt-get install mysql-server 
+安装过程中，会提示输入密码
+Suse安装Mysql：
+rpm –ivh MySQL-client-community-5.1.45-1.rhel5.i386.rpm
+	创建Sonar登录数据库的账号以及SonarQube所使用的数据库sonar
+mysql -u root -p    #以root用户登录mysql；
+use mysql;
+create  user  sonar  identified  by "sonar"
+grant all on sonar.* to 'sonar'@'%' identified by 'sonar';
+grant all on sonar.* to 'sonar'@'localhost' identified by 'sonar';
+flush privileges;
+exit                #退出当前用户
+mysql -u sonar -p   #以sonar用户登录mysql
+create database sonar CHARACTER SET utf8 COLLATE utf8_general_ci;      #ci表示： case insensitive
+#不同编码的区别：http://china.ygw.blog.163.com/blog/static/6871974620132220289638/ 
+5.1.3 安装sonarqube、sonar-runner
+Sonar-runner相当于一个客户端，也可以需要时再安装。
+	将软件解压到/opt
+unzip sonarqube-4.5.4.zip /opt
+unzip sonar-runner-dist-2.4.zip /opt
+为方便启动sonarqube服务，设置开机自启动：
+sudo ln -s /opt/sonarqube-4.5.4/bin/linux-x86-64/sonar.sh /etc/init.d/sonar
+root@SIA1000014858:/etc/init.d# sudo chmod 755 /etc/init.d/sonar
+root@SIA1000014858:/etc/init.d# sudo update-rc.d sonar defaults
+    
+	配置环境变量：
+添加SONAR_HOME、SONAR_RUNNER_HOME环境变量，并将SONAR_RUNNER_HOME加入PATH
+export SONAR_HOME=/opt/sonarqube-4.5.4
+export SONAR_RUNNER_HOME=/opt/sonar-runner-2.4
+export PATH=${PATH}:${JAVA_HOME}/bin:${CATALINA_HOME}/bin:${M2_HOME}/bin:${ANT_HOME}/bin:${SONAR_RUNNER_HOME}
+
+	修改sonar配置文件：
+vim /opt/sonarqube-4.5.4/conf/sonar.properties 
+将以下条目前面的注释去掉，并添加条目sonar.jdbc.driverClassName 
+sonar.jdbc.username=sonar
+sonar.jdbc.password=sonar
+sonar.jdbc.url=jdbc:mysql://localhost:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance
+sonar.jdbc.driverClassName=com.mysql.jdbc.Driver
+	修改sonar-runner配置文件：
+vim /opt/sonar-runner-2.4/conf/sonar-runner.properties
+打开以下条目：
+#设置sonar的url
+sonar.host.url=http://10.180.131.174:9000
+sonar.jdbc.url=jdbc:mysql://10.180.131.174:3306/sonar?useUnicode=true&amp;characterEncoding=utf8
+sonar.jdbc.username=sonar
+sonar.jdbc.password=sonar
+
+sonar.sourceEncoding=UTF-8
+#账户以及设置密码
+sonar.login=admin
+sonar.password=admin
+
+	添加数据库驱动：
+除Oracle数据库外，其它数据库驱动都默认已经提供了，且这些已添加的驱动是sonar唯一支持的，因此不需要修改
+如果是Oracle数据库，需要复制JDBC驱动至<install_directory>/extensions/jdbc-driver/oracle目录
+
+	启动sonar
+/opt/sonarqube-4.5.4/bin/linux-x86-64/sonar.sh start
+
+ 
+	登录Sonarqube
+ 
+Sonar默认的端口是”9000”、默认的上下文路径是”/”、默认的网络接口是”0.0.0.0”，默认的管理员帐号和密码为:admin/admin，这些参数都可以在配置文件中修改。如果登陆失败，查看日志：/opt/sonarqube-4.5.4/logs/sonar.log,可能是以下问题：
+
+SonarQube安装问题：
+java.lang.IllegalStateException: Can not connect to database. Please check connectivity and settings (see the properties prefixed by 'sonar.jdbc.').
+... ...
+caused by: com.mysql.jdbc.exceptions.jdbc4.MySQLSyntaxErrorException: Unknown database 'sonar'
+        at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method) ~[na:1.8.0_31]
+原因分析：
+提示未知的数据库 sonar，此数据库非彼数据库，此数据库指的是在用户sonar下通过sql语句建立的数据库sonar，而原本建立的数据库sonar实在root用户下，sonar用户没有访问root用户数据库的权限，sonar根本看不到root的东西。
+所以，创建数据库sonar的时候，需要通过sonar用户登录mysql。
+解决办法：
+通过sonar用户登录mysql，建立数据库sonar：
+CREATE DATABASE sonar CHARACTER SET utf8 COLLATE utf8_general_ci; 
+5.2 SonarQube使用
+5.2.1 插件配置使用
+a）插件介绍
+Sonar支持多种插件，插件的下载地址为：http://docs.sonarqube.org/display/SONAR/Plugin+Library  
+将下载后的插件上传到${SONAR_HOME}extensions\plugins目录下，重新启动sonar。
+sonar默认集成了Java Ecosystem插件，该插件是一组插件的合集
+Java [sonar-java-plugin]：java源代码解析，计算指标等
+Squid [sonar-squid-java-plugin]：检查违反Sonar定义规则的代码
+Checkstyle [sonar-checkstyle-plugin]：使用CheckStyle检查违反统一代码编写风格的代码
+FindBugs [sonar-findbugs-plugin]：使用FindBugs检查违反规则的缺陷代码
+PMD [sonar-pmd-plugin]：使用pmd检查违反规则的代码
+Surefire [sonar-surefire-plugin]：使用Surefire执行单元测试
+Cobertura [sonar-cobertura-plugin]：使用Cobertura获取代码覆盖率
+JaCoCo [sonar-jacoco-plugin]：使用JaCOCO获取代码覆盖率
+下面列出了一些常用的插件：
+JavaScript代码检查：http://docs.codehaus.org/display/SONAR/JavaScript+Plugin
+python代码检查：http://docs.codehaus.org/display/SONAR/Python+Plugin
+Web页面检查（HTML、JSP、JSF、Ruby、PHP等）：http://docs.codehaus.org/display/SONAR/Web+Plugin
+xml文件检查：http://docs.codehaus.org/display/SONAR/XML+Plugin
+scm源码库统计分析：http://docs.codehaus.org/display/SONAR/SCM+Stats+Plugin
+文件度量：http://docs.codehaus.org/display/SONAR/Tab+Metrics+Plugin
+中文语言包：http://docs.codehaus.org/display/SONAR/Chinese+Pack
+时间表显示度量结果：http://docs.codehaus.org/display/SONAR/Timeline+Plugin
+度量结果演进图：http://docs.codehaus.org/display/SONAR/Motion+Chart+Plugin
+b）插件配置示例（本段内容来自http://www.ibm.com/developerworks/cn/java/j-lo-sonar/）
+Sonar 的主要特色是对不同工具产生的检查结果进行再加工处理，Sonar 还向用户提供了对数据进行个性化处理的方法。
+本节以 Technical Debt 插件为例说明如何通过设置参数影响最后的报告结果。首先了解一下这个插件中的“技术债务”的概念，这个概念最早是在 1992 年由 Ward Cunningham 在他的论文“The WyCash Portfolio Management System”中提出的，之后被软件工程界接受并推广，《重构》的作者 Martin Fowler 也在其 网站上对技术债务有所介绍。其实原理可以理解为“出来混早晚要还的”，当前不规范的代码，会对以后产品修改的成本造成影响。
+Soanr 的 Technical Debt 插件提供了默认的计算公式，通过对其中的权重参数进行配置，可以适应不同公司和项目对技术债务的计算。
+  
+以上的各项数据指标，可以根据自己公司和项目的不同情况进行设置，如图所示：
+ 
+例如默认参数下同一个项目的技术债务指标如下：
+ 
+修改了参数后的结果为：
+ 
+可见将 Average time to cover complexity of one (in hours) 从 0.2 修改为 0.01 后，Coverage 的权重变小了，从而达到忽略单元测试覆盖率的作用。不同的公司和项目可以根据需要调整各自的参数，参数的调优和策略不在本文的讨论范围之内。
+通过以上的示例可以看出，Sonar 使用不同类型的图表显示给用户代码质量的结果，并且这些图表不是简单地对单元测试覆盖率或者静态检测工具的结果进行显示，而是根据软件工程理论进行了二次加工后的结果，更加科学和直观。
+c）更新中心
+以管理员用户登录Sonar，进入配置->系统，选择更新中心，如图：
+ 
+其中Available Plugins选项卡提供了可以选择安装的插件，System Updates可以在线更新Sonar。
+下载插件需要注意其中有些插件是需要购买才能使用的，其License类型为Commercial。
+ 
+5.2.2 常见错误及解决方法
+添加语言包后，启动报错分析：
+下载安装 sonar-l10n-zh-plugin-1.4.jar 语言包(http://docs.codehaus.org/display/SONAR/Chinese+Pack)，重新打包部署后，后台报错如下：
+Error in Sonar.log : 2012.10.25 14:39:15 INFO org.sonar.INFO Register rules [squid/java]...2012.10.25 14:39:15 ERROR o.s.s.p.Platform The following rule (repository: squid) must have a description: Rule[id=<null>,name=<null>,key=ParsingError,configKey=ParsingError,plugin=squid,enabled=true,severity=MAJOR,cardinality=SINGLE]org.sonar.api.utils.SonarException: The following rule (repository: squid) must have a description: Rule[id=<null>,name=<null>,key=ParsingError,configKey=ParsingError,plugin=squid,enabled=true,severity=MAJOR,cardinality=SINGLE]at org.sonar.server.startup.RegisterRules.validateRule(RegisterRules.java:131) ~[classes/:na]at org.sonar.server.startup.RegisterRules.registerRepository(RegisterRules.java:103) ~[classes/:na]at...
+(可参考http://jira.codehaus.org/browse/SONAR-3910)
+解决方法：将 extensions\plugins\ 目录下的jar包全部删除，重新加入本地语言包后，重新打包部署即可。
+5.3 与jenkins集成
+5.3.1 通过Maven进行集成
+	修改配置文件
+修改maven的主配置文件（${MAVEN_HOME}/conf/settings.xml文件或者 ~/.m2/settings.xml文件），在其中增加访问Sonar数据库及Sonar服务地址，添加如下配置：
+<profile>
+<id>sonar</id>
+<properties>
+    <sonar.jdbc.url>jdbc:mysql://localhost:3306/sonar</sonar.jdbc.url>
+    <sonar.jdbc.driver>com.mysql.jdbc.Driver</sonar.jdbc.driver>
+    <sonar.jdbc.username>sonar</sonar.jdbc.username>
+    <sonar.jdbc.password>sonar</sonar.jdbc.password>
+		<!-- Sonar服务器访问地址 -->
+    <sonar.host.url>http://localhost:9000</sonar.host.url> </properties>
+</profile>
+<activeProfiles>
+  <activeProfile>sonar</activeProfile>
+</activeProfiles>
+此处注意sonar.host.url地址应根据sonar部署情况修改，将localhost换成对应的IP地址
+同样，为了避免内存溢出，推荐增加内存堆栈的大小。设置MAVEN_OPTS环境变量：
+set MAVEN_OPTS=”-Xmx512m -XX:MaxPermSize=256m”  
+	使用Sonar
+a. 运行Sonar服务器;
+b. 通过 mvn sonar:sonar 将代码注入到Sonar中进行分析处理,并将处理结果以XML的形式保存在数据库中;
+c. 通过浏览器访问,显示分析结果;
+d. 持续运行Maven构建,会迭代显示分析结果;
+e. 可以显式指定sonar插件的版本,如下:
+        <project>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.sonar</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
+                        <version>3.5.1</version>
+                    </plugin>
+                </plugins>
+            </build>
+        </project> 
+f. 可以显式的将sonar绑定到Maven生命周期中,如下: 
+        <plugin>  
+            <groupId>org.codehaus.sonar</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>3.5.1</version>
+            <executions>
+                <execution>
+                    <id>sonar</id>
+                    <phase>site</phase>
+                    <goals>
+                    <goal>sonar</goal>
+                    </goals>
+                </execution>
+            </executions>
+    　　</plugin>
+此时，指定Maven的site声明周期时,则会自动调用sonar.sonar 命令.
+5.3.2 直接与Jenkins集成
+在jenkins的插件管理中选择安装sonar jenkins plugin，该插件可以使项目每次构建都调用sonar进行代码度量。进入配置页面对sonar插件进行配置，如下图：
+ 
+配置构建项目，增加Post Build Action：
+ 
+ 
+ 
+应用程序构建时就会自动触发Sonar对代码的检查
+ 
+在jenkins的系统管理—>系统设置里面配置如下：
+ 
+sonar插件：http://docs.codehaus.org/display/SONAR/Activate+Sonar+on+Jenkins+job
+sonar配置：http://docs.codehaus.org/display/SONAR/Configure+Sonar+plugin
+sonar服务端配置文件：http://my.oschina.net/u/151957/blog/52902
+
+5.4 Sonar-runner配置
+5.4.1 下载Sonar-Runner
+下载地址：http://repository.codehaus.org/org/codehaus/sonar-plugins/sonar-runner
+5.4.2 配置Sonar-Runner环境变量
+（1）SONAR_RUNNER_HOME            你的安装位置
+（2）Path            ${SONAR_RUNNER_HOME}/bin (Unix) or%SONAR_RUNNER_HOME%/bin
+（3）修改${SONAR_RUNNER_HOME}/conf/sonar-runner.properties文件，打开database connection, server URL的注释
+6 仓库管理Nexus搭建
+Nexus是一个仓库管理软件，可以帮助项目组建立自己的私服。私服是一种特殊的远程仓库，它是架设在局域网内的仓库服务，代理广域网上的远程仓库，供局域网内的Maven用户使用，当Maven需要下载构件的时候，它从私服请求，如果私服上不存在该构件，则从外部的远程仓库下载，缓存在私服上后，再为Maven的下载请求提供服务 
+6.1 Nexus安装与卸载
+6.1.1 Nexus安装
+	nexus下载
+官方网站：http://www.sonatype.org/nexus/go
+参考网站：http://www.sonatype.org/nexus/archived/#step2top  
+ 
+	设置环境变量
+export RUN_AS_USER=root  #主要是这一句
+export NEXUS_HOME=/opt/nexus-2.11.2-03
+export PLATFORM=linux-x86-64
+export PLATFORM_DIR="${NEXUS_HOME}/bin/jsw/${PLATFORM}"
+export WRAPPER_CMD="${PLATFORM_DIR}/wrapper"
+export WRAPPER_CONF="${PLATFORM_DIR}/../conf/wrapper.conf"
+export PIDDIR="${NEXUS_HOME}"
+	运行
+root@SIA1000014858:/# ./opt/nexus-2.11.2-03/bin/nexus start
+ 
+安装参考：http://blog.csdn.net/dengsilinming/article/details/17635191 
+6.1.2 登录nexus
+http://10.180.131.174:8081/nexus 
+ 
+ 
+
+下载nexus-2.0-bundle.zip，在解压目录nexus-2.0-bundle\nexus-2.0\bin\jsw\windows-x86-32下运行install-nexus.bat 完成安装。运行start-nexus.bat启动服务。
+在浏览器地址栏输入http://localhost:8081/nexus/index.html#welcome ，进入本地的Nexus资源仓库。点击右上角登陆Log In，输入用户名：admin，密码：admin123，进入管理界面。     
+6.1.3 Nexus卸载
+在解压目录nexus-2.0-bundle\nexus-2.0\bin\jsw\windows-x86-32下运行stop-nexus.bat停止服务，然后运行uninstall-nexus.bat进行卸载。
+6.1.4 War包方式安装
+http://www.sonatype.org/downloads/nexus-latest.war war包下载
+修改war包文件名： mv nexus-latest.war nexus.war,扔到Tomcat的webapps目录下，在浏览器地址栏输入ip:8080/nexus 登录。
+6.2 Nexus使用
+提示：很多字段后面设有帮助提示，将鼠标放在图标 上，就会显示该字段的具体描述。
+6.2.1 修改部署密码
+Nexus是团队共有的资源仓库，对于构件的部署需要进行管理，只有有权限的人才可以部署构件到这个资源仓库上，所以需要对部署角色进行密码设置。这个密码在之后修改maven的settings.xml文件时需要使用，别忘记了哦。
+依次选择Security —>Users，右键单击deployment，选择Set Password，设置部署密码。
+  
+6.2.2 添加代理资源仓库
+我们的产品需要用到公司其他产品的构件时，可以在资源仓库中添加一个代理仓库，连接到他的资源仓库，在设置依赖关系后，maven可以从所代理的仓库下载需要的构件。
+1)	依次选择Views/Repositories —>Repositories —>Add，添加一个代理仓库。
+ 
+设置代理仓库的ID和名称，Repository Policy选择release版本，下图中红色区域填入远程仓库的地址，其他字段保持默认值，保存设置。注意：如果一个代理仓库的策略是release，那么它只会访问远程仓库的发布版本构件。如果一个代理仓库的策略是snapshot，它只会下载远程仓库的快照版本构件。
+ 
+2)	将新建的代理仓库设置为公共仓库，依次选择Repository —>Public Repositories —>Configuration，将代理仓库test左移至公共仓库组，保存设置。
+ 
+
+在nexus中有3种仓库类型：代理仓库、宿主仓库和虚拟仓库
+1)	代理仓库：一个代理仓库是对远程仓库的一个代理。默认情况下，Nexus自带了如下配置的代理仓库：
+	Apache Snapshots：包含了来自于Apache软件基金会的快照版本。
+	Codehaus Snapshots：包含了来自于Codehaus的快照版本。 
+	Central Maven Repository：中央Maven仓库（发布版本）。 
+2)	宿主仓库：一个宿主仓库是由Nexus托管的仓库。Maven自带了如下配置的宿主仓库：
+	3rd Party：用来存储在公共Maven仓库中找不到的第三方依赖。这种依赖的样例有：产品需要使用的商业的或者私有的类库如Oracle JDBC驱动，或者是公司其他产品的资源仓库，比如BME。
+	Releases：产品公布内部发布版本的地方。
+	Snapshots：产品发布内部快照版本的地方。
+3)	虚拟仓库：一个虚拟仓库作为Maven 1的适配器存在。Nexus自带了一个central-m1虚拟仓库。
+6.2.3 上传软件包
+Nexus允许上传本地软件包，供其他人下载使用。
+依次选择Views/Repositories —>Repositories —>3rd party —>Artifact Upload
+ 
+在GAV Definition中可以选择只上传软件包的pom文件，或者完整的软件包。
+ 
+单击Select Artifact(s) to Upload选择要上传的本地软件包，单击Add Artifact添加构件。要注意的是：3rd party的构件是发布版本的，就是说只能上传发布版本的构件。
+ 
+6.2.4 浏览系统信息源
+Nexus提供了捕捉系统事件的RSS源，可以浏览最近nexus中发生的关于构件部署，构件缓存，存储编号的报告。
+依次选择Views/Repositories —>System Feeds，在Feed中选择要查看的报告类型，下方为具体报告。
+ 
+6.2.5 设置定时任务
+在管理界面可以设置定时任务，常用的两个定时任务一个是设置定期清除snapshot快照仓库，保留最新的snapshot，减轻仓库的存储负担。另一个是设置定期更新索引值，在资源仓库中查找构件依赖于仓库生成的构件索引值，所以需要对仓库的索引值进行更新。其他定时任务可以视项目具体要求设置。
+1)	设置定期清除snapshot快照仓库：依次选择Administration —>Scheduled Tasks —>Add，在Task Type选择卡中选择要新建的定时任务的类型：Remove Snapshots From Repository。
+ 
+字段Repository/Group选择要清除的仓库，一般选择放置快照版本的仓库：Remove Snapshots From Repository。字段Minimum snapshot count设置保留的同一构件快照版本的最小数量，若设为3，则至少保存同一构件的3个快照版本。字段Snapshot retention(days)设置清除超期的快照版本，若设为3，则清除3天之前的快照版本，但会遵守保留的最小值设定，如至少保存3个。勾选Delete immediately，直接清除而不放至缓存。Recurrence设置启动方式为每日启动，设置启动时间，保存设置。
+ 
+2)	设置定期更新索引值：在Task Type选择卡中选择要新建的定时任务的类型：Update Repositories Index。
+ 
+字段Repository/Group设置为添加的代理仓库。
+ 
+字段Recurrence可以根据代理仓库的仓库策略设置，如果代理仓库为发布版本，那么可以设置为手动更新，在发布新版本时手动更新仓库索引值；如果代理仓库为快照版本，可以根据快照版本的更新频率设置更新索引值的频率。完成后保存设置。
+ 
+手工启动定时任务：选中要启动的任务，单击Run按钮。
+ 
+6.3 配置maven使用nexus
+6.3.1 设置nexus镜像
+在~/.m2/settings.xml文件中添加mirror配置
+ 
+其中nexusserver.test.huawei.com是设置的一个镜像，避免因资源仓库的主机IP变化修改大量配置文件。设置方法：在目录C:\Windows\System32\drivers\etc\(windows)下，或者/etc/hosts"(Linux)下编辑文件hosts，增加一条格式如下的语句，以#结束：10.82.129.120 nexusserver.test.huawei.com #。 IP为资源仓库的主机IP，后面为自己设置的域名，中间以空格符隔开。这样，以后IP地址改变只需要更改hosts文件中添加的这条语句。
+ 
+在将nexus配置成所有仓库的镜像后，如果开发人员定义的依赖关系中有一个构件请求，maven会首先在他本地的仓库查找构件，如果没有再从nexus资源仓库获取这个构件，查找顺序为Public Repositories的配置顺序，即下图红色框中的顺序。如果nexus中也没有这个构件，那么nexus会从代理的远程仓库获取这个构件。
+ 
+6.3.2 使用nexus做为快照/发布版本仓库
+在settings.xml文件中添加profiles配置，并设置其为活动的profile。注意：默认的snapshots是不允许下载的，要修改enabled值为true。
+ 
+6.3.3 构件部署设置
+修改有权限部署构件至nexus上的主机的settings.xml文件。Password是2.2节设置的nexus部署密码。在这台主机上运行mvn deploy命令就可以部署构件至nexus。
+ 
+
+
+
