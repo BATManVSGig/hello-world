@@ -19,3 +19,7 @@
     如VxWorks下可通过Shell命令ti查看、
     Linux下可通过gdb命令info reg查看、
     Windows下可通过VC++中debug下寄存器窗口查看
+    
+    PowerPC对通信的理解还是比较深刻的，在通信领域占有约50%的市场，但是随着多核MIPS的崛起，以及Freescale对多核市场的不敏感，被MIPS抢占了不少的市场份额，
+    当Freescale醒悟过来的时候，已经晚了。Freescale是传统的最大的Powerpc厂家，也在投身到ARM64这块热土，两条腿走路。2015年随着NXP斥资120亿美金收购Freescale的重磅收购信息来袭，后续PowerPC路在何方
+    ？NXP是否会继续发展PowerPC，需要进一步观察，处理器选用要坚定在主航道上，避免供应或商务风险
