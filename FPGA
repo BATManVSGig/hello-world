@@ -366,6 +366,59 @@ ACTIVE-VHDL自带教程
 
 现代集成电路设计中，芯片的规模和复杂度正呈指数增加。尤其在ASIC设计流程中，验证和调试所花的时间约占总工期的70%。为了缩短验证周期,在传统的仿真验证的基础上，涌现了许多新的验证手段，如断言验证、覆盖率驱动的验证，以及广泛应用的基于现场可编程器件(FPGA)的原型验证技术。
 
+FPGA 时序
+1 时序路径
+2 Setp time & hold time
+3 LaunchEdge & LatchEdge
+4 Data Arrival time & clock Arrival time
+5 Data require Time
+6 slack
+7 Multicycle Path
+8 Flase Path
+
+RAN L1/L2/L3 处理 数据包加解密/快速转发  MEC计算业务 新业务（基础加速算子API  FFT  矩阵加减法 卷积 矩阵转置 Turbo译码 矩阵求逆）
+Guest运算环境用户面
+高弹性，低能耗，弹性伸缩
+Job    Read    Process  Write
+Queue  read    Process  Write
+
+---------------------------------------------------------------------------------------
+
+Host Code Path                              kenel Code Path
+ 
+altera OpenCl Runtime . cor .cpp          kernel source code
+      Environment                     
+                       Host Compiler         AOC
+                                       
+                       Host binary       FPGA image
+                                          Execute host
+                                          app lication
+                                          on host
+                                          Final Compnation result
+---------------------------------------------------------------------------------------
+FPGA 能管理，能运行，开发周期长，复杂算法开发难度大
+ASIC 低时延，功能封闭，单一固定
+DSP  适合有大量递归操作以及不便拆分的算法 
+CLB  configuable logic block
+
+IOB   input output block 
+       Interconment
+长线  短线
+硬核单元：RAN 双端口
+DSP 全定制低功耗 DSP硬核 专用
+CMT clock Management Tiles 数字时钟管理模块
+Interface硬核 高速传输GTX 数模转换XADC
+IPD 流程 概念 计划 开发 验证 发布 生命周期  LRS LLD CODE UT IT STS STB 组合逻辑，时序逻辑
+功能定义/器件选型   RTL代码
+设计输入
+功能仿真    逻辑仿真
+综合优化     逻辑综合器
+综合后仿真    仿真器
+实现与布局布线  FPGA原理图
+时序仿真       逻辑仿真器
+分析时序  一个clock节拍不对，推到重来，重新验证
+静态时序分析  板级仿真与验证  芯片编程与调试
+
 采用FPGA原型技术验证ASIC设计，首先需要把ASIC设计转化为FPGA设计。但ASIC是基于标准单元库，FPGA则是基于查找表，ASIC和FPGA物理结构上的不同，决定了ASIC代码需要一定的修改才能移植到FPGA上。但应该注意到这只是由于物理结构不同而对代码进行的转换，并不改变其功能，因此对代码的这种修改只能限制在一定范围内。
 
 基本原理
