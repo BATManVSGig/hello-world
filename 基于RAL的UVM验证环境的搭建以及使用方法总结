@@ -1,0 +1,402 @@
+基于RAL的UVM验证环境的搭建以及使用方法总结
+最近用superbench搭建了一个uvm的验证环境，用来熟悉RAL的各种使用方法，总结如下（文中的RW_REG为个人新建的模块名字）：
+1	背景介绍
+1.1	什么是UVM RAL？
+RAL是英文Register Abstraction Layer的缩写，翻译过来就是“寄存器抽象层”。望文生义，RAL肯定和寄存器的验证有关。实际上UVM RAL是Synopsys基于寄存器抽象层验证技术而开发的针对芯片验证中如何简便、高效地完成寄存器/存储器相关的验证，配置管理这一问题的解决方案。这个定义有点高大上，个人的理解如下：（也许我理解的不到位大家多多拍砖）。
+对寄存器进行验证无非就是以下几个方面：
+a、首先看看寄存器的复位值正不正确。为了验证寄存器的复位值正不正确，首先想到的就是对寄存器进行复位操作，然后再将寄存器的值读出来看看是不是和期望的复位值一致。其实UVM RAL就是这么干的。
+b、其次还得要看看寄存器是不是可以读写的。为了验证寄存器是不是可读写的，是不是要对寄存器进行读写看看是否读写成功就行了。
+…………
+所以UVM RAL说穿了就是通过各种方式对需要验证的寄存器/存储器进行读写，从而验证寄存器/存储器是否正确。UVM RAL定义了读写的方式、顺序、读写哪些寄存器/存储器等等问题。
+1.2	UVM RAL的优点及其说明
+a、提供多种可重用的代码，用户只需要编写极少的环境代码，以及寄存器描述文件和用例。
+b、提供后门途径，实现路径访问和接口访问一样简便，且不消耗仿真时间，快捷高效
+  ：
+这里得要解释下什么是后门操作？
+有后门操作就有前门操作，首先得解释下什么是前门操作？
+所谓前门操作就是通过寄存器总线（如APB、AXI、AHB协议等）来对DUT进行读写操作。
+下面以一个例子来说明后门操作：在DT003中，有一些计数器用于统计各种包的数量，如超长包、超短包等等。这些计数器都是只读的，DUT的总线接口无法通过前门访问操作来对其进行写操作，但是在验证的时候又需要对其进行写操作，这就是后门访问，后门操作是相对于前门操作来说的，现在也给不出什么具体的定义，暂且定义如下：所有不通过DUT的总线而对DUT内部的寄存器或者存取器进行存取的操作都是后门访问操作。这里有一点需要特别注意：并不是说只有只读的寄存器或者存取器才能进行后门操作，可读写的寄存器/存储器也是可以进行读写操作的。
+后门操作不消耗仿真时间，只消耗运行时间，这对跑仿真来说是一个大大的好处，但是后门操作无法在波形文件中找到操作痕迹，只能通过验证验证平台或者前门操作辅助来记录器操作过程，这样就要求验证人员对验证环境比较熟悉。
+c、继承性高，方便从模块到系统的集成。
+d、支持callbacks，为用户提供灵活的扩展。这个没有研究过，说不上什么？
+e、提供了寄存器和memory访问的覆盖率分析。这个没有研究过，说不上什么？
+f、实现寄存器镜象，单一任务即可实现DUV中寄存器值检查。
+下面解释什么是寄存器镜像？
+首先得解释下RAL的结构：
+ralgen生成的寄存器模型具有如下图所示的树形结构，
+ 
+field：寄存器中的某些或某个bit可以为一个field，即寄存器中的一个域 
+register /memory：寄存器/存储器，其中寄存器由若干个域组成
+block：验证中能使用的最小功能单元，block由若干个register或者memory组成 
+system：由若干个block组成
+在寄存器模型的.sv文件中能够很清楚的看清楚这种树形结构。
+uvm_reg_field有两个镜像值：mirrored和desired。
+这两个镜像值在UVM的源码文件./uvm-1.1d/src/reg/uvm_reg_field.svh中，如下图所示，用户均不可见。
+ 
+为什么需要这两个值呢？在调用REG的update（reg的一个操作函数）时，如果mirrored!=desired，则把Desired值写入寄存器。环境在初始化的时候，会set或rand很多配置寄存器，然后调用sys/block的updata一起更新。只更新变化的寄存器可以极大提高仿真效率 
+下面来解释下RAL中各个函数，函数包含两种函数一种是对mirrored进行操作的函数，另一种是对DUT进行操作的函数（之所以这样分是为了更好地理解这些函数，不一定严谨）：
+对mirrored进行操作的函数包含以下几种：
+set()     设置镜像的值，只写域desired
+get(）    得到镜像的值，读域desired
+predict()  强制设置镜像的值，写域mirrored和desired
+mirror()  更新镜像中的值，来匹配DUT中的值，执行read()
+reset()    进行复位，使用复位值写域mirrored和desired 
+对DUT进行操作的函数包含以下几种：
+read()    从DUT读，同时写域mirrored和desired 
+write()   往DUT写，同时写域mirrored和desired
+peek()   通过后门方式读DUT中的值，同时写域mirrored和desired
+poke()   通过后门方式写DUT中的值，同时写域mirrored和desired 
+update()  用desired值更新该寄存器值 
+下图具体形象的描述了这些操作和mirrored、desired以及reg的对应关系：
+ 
+这个图已经非常形象的说明了这些操作到底干了一些什么事，这里就不再赘述了。
+g、隐藏地址，按名访问，访问与维护都变得很简捷
+h、可对寄存器域进行单独操作
+i、提供后门途径，实现路径仿问和接口访问一样简便，且不消耗访真时间，快捷高效
+j、提供可用的TestCase，寄存器和存储器常规测试可完全重用
+在RAL寄存器的测试中提供了很多gloden测试模型，UVM已经完全定义好了一些固定的sequence，在测试的时候只需要直接调用这些黄金测试模型就可以完成对寄存器的验证。当然你也可以自己构建测试用例。
+k、提供覆盖率自动收集功能。
+这个功能没有研究过，说不上什么
+l、模型统一维护寄存器列表，设计变动对环境的影响被降到最低。
+1.3	怎样用superbench搭建一个基于UVM_RAL的验证环境
+在搭建一个验证环境之前，首先，先得把验证环境架构理清楚，这样便于对后面验证环境的理解：一个真实的superbench搭建的UVM_RAL的验证环境如下图所示：
+     看到这个验证环境架构，大家一定有很多疑问，后面再详细说明这个验证环境，首先先介绍下这个环境是怎么搭建起来的
+1.3.1	superbench验证环境建立
+基本目录结构的建立
+前面介绍了环境的基本架构，这里给出实际的操作。首先看到，验证环境是比较复杂的，需要对环境中的各个部件进行有效地管理。一个有效的管理首先是建立好一个良好的目录结构。目前采用的目录结构如下：
+|——rtl
+|——scripts
+|——verification
+|——bt
+|    |——…
+|——common
+|    |——prj_com
+|    |——script
+|    |——utils
+|——it
+|    |——…
+|——st
+|    |——…
+|——ut
+|    |——…
+其中，rtl目录为放置源代码的地方；scripts目录为放置脚本的地方；而整个验证将会在verification目录下进行。verificaiton目录下分为了ut（单元测试）、bt（模块测试）、it（集成测试）、st（系统测试）和common（通用）。顾名思义，不同级别的测试放在不同的文件夹下面，对于我们来说，主要是模块验证。因此，本次验证将会在bt下进行。
+目录结构不用手动建立，只需要在需要建立该树形目录结构的文件下输入一个命令即可：
+h_create_dir –int
+这个命令是由SuperBench提供的（需要安装SuperBench）。
+具体一点说，首先新建一个文件夹RW_REG。  
+进入到该目录，建立树形目录结构。 
+这样就建立好了总体的目录结构。但是bt和common文件夹下面还没有任何文件。这个工作和superbench环境搭建同时完成。
+SuperBench环境框架搭建
+Superbench是我司开发的一个平台，该平台可以基于UVM和我们的一些基本需求搭建最初的框架。那么搭建的框架包含哪些内容呢？等完成建立步奏，就可以知道。
+首先需要把源文件拷贝到rtl文件夹下，包括包含所有rtl文件的list文件。
+要用一个软件，当然首先是安装它。目前使用的superbench版本为2.0，因此，我们用下列命令安装superbench：
+ma superbench/2.0
+在实际使用中，可以将该命令写入.cshrc，这样，在source该文件的时候就会安装superbench了。
+安装好superbench后，可以利用下列命令打开superbench：
+stb &
+打开后的部分界面截图如下：
+ 
+点击打开文件，弹出对话框：
+ 
+选择需要进行环境搭建的目录： 
+点击choose，会在左侧的File View出现选择的文件夹。右键单击bt文件夹，选择
+ 
+在弹出的对话框中，Block Name为模块名字，即在bt下的文件夹的名字，可以写上RW_REG。Project Name为工程名，随意，不如也写上RW_REG。
+接下来是重点需要说明的地方，那就是Utils Setting。首先需要解决一个问题，到底什么是Utils？Utils是一个通用的组件，这些通用的组件是围绕着接口来的，在很多时候是可以共用的。详细一点说，如上面环境架构图所示：认为bus读写接口为一个Utils，i接口为一个Utils，o接口为一个Utils。这种分法可以使我们在环境里面灵活调用各个Utils，比如调用i和o。个人认为分Utils的方法可以根据其独立性和属性来分。独立性是指各个功能的独立程度，比如i接口和o接口，这两个接口没有太多的相关性。而属性，是指该接口外挂载设备的属性。对于bus接口来说，外围挂载的apb_if_interface属于master（主机）。
+解决了认知，开始建立Utils。点击Add Utils，输入Utils的个数，这里对RW_REG分了3个Utils（可自己分）。点击ok后可以在Utils下面看到3个建立的Utils。需要关注的属性有4个：Name、Type、Instance Num、Work Mode List。Name为Utils的名字（废话），Type为类型。Superbench提供两种类型可供选择，一种是normal，另外一种是cpu，这是因为cpu的work mode list是不一样的。Instance Num是每种Utils的例化份数，对于RW_REG来说，每种Utils只需要例化一份就可以了。
+这里的关键是work mode list，对于cpu utils来说，可选择的如下：
+ 
+需要注意的是，这里的勾选是可以勾选多个的，代表可以选择的模式，可以理解为当勾选了后，就生成了相应的模式的代码，在使用的时候就只需要在主环境里面选择就可以。可以肯定的是，如果没有勾选相应的模式，那么如果在以后发现需要用到这种模式，修复的代价会相对高。所以一般采取宁可错杀一千的方式，全部勾选，也没有什么问题。（也许全部勾选会影响编译效率？留待研究但是我没有研究过）。
+对于normal utils，也推荐全部勾选上。
+一个可以使用的add utils例子如下： 
+接下来是Utils Instance Setting，这个就是实例化的Utils。这里只需对其配置默认模式即可。大家在这里可以发现，这里可以配置的模式是在之前勾选的模式，如果之前只勾选了一个模式，则只能选择一个；如果之前勾选了多个模式，这里可以指定一个默认的，如果需要，可以在生成的环境中通过一个变量直接修改（前提一定是勾选了该模式）。
+最后是右边的设置，比较简单，这里直接给出例子：
+ 
+其中，需要解释一下的是.lst文件，该文件是一个list文件，包含所有需要的.v文件。List文件里面使用相对路径即可。
+点击ok，完成superbench环境框架的生成。
+SuperBench环境说明及修改
+在SuperBench环境框架搭建完成后，可以看到在bt下和common/utils下生成了一些文件夹和文件。这些文件构成了SuperBench环境的框架。这里对这些文件进行一些说明和一些普适的修改。
+tb.f文件
+首先需要关注的是bt/RW_REG/cfg下面的tb.f文件。cfg文件夹顾名思义，是整个环境的配置信息。打开tb.f，可以看到一些文件的路径，如下图所示： 
+该文件是整个环境需要编译的文件列表，单独的文件直接写出路径，list文件用-F（-f）来读取。这个列表就把各个文件整合起来，可以理解为建立了一个包含这些文件的“工程”。这样一来，一个文件定义的class就可以在另外一个文件中实例化，而不必担心“工程”找不到相应的定义。需要特别注意的是tb.f里面包含的文件顺序，只能是下面的文件引用上面的文件的东西，不能反向引用。这是因为tb.f是顺序执行的，当编译到上面一个文件时，发现用了一个不知道的class，是会报错的，即使这个class在下面的某个文件中已经定义。所以需要把最低层的文件放在上面，而把较高层的文件放在下面。
+那么这里的-F和-f有什么区别呢？
+Vcs手册中，-f/-F的相关解释如下：
+-f <filename>
+Specifies a file that contains a list of pathnames to source files and compile-time options.
+ -F <filename>
+Same as the -f option but allows you to specify a path to the file and the source files listed in the file do not have to be absolute pathnames.
+上述文档中的解释比较笼统，不利于很好的理解两者的差别，-F涵盖了-f的所有功能，两者之间的区别，将通过如下例子进行解释。
+如下图所示，最常使用的-F 相对路径/文件列表，将某类文件加载到testbench的文件列表中，进行仿真。
+ 
+上图的sd5980_common.list中，涵盖了下图所示的文件
+ 
+经过vcs编译，src/sd5980_dec.sv文件并不是在仿真目录(通过就是sim目录)中寻找，该文件地址被展开为-F后的路径+文件列表中的路径/文件名。即为：../../../common/utils/sd5980_common加上src/sd5980_dec.sv，即得到vcs所编译的文件路径: ../../../common/utils/sd5980_common/src/sd5980_dec.sv。
+ 
+若将上图文件列表中的-F修改为-f，则出现了如下的编译报错
+ 
+从报错信息，可以看出，list中的文件(src/sd5980_dec.sv)不再会加上-f中的地址路径，该文件直接在仿真目录下寻找，导致仿真文件找不到。
+小结一下，-f与-F区别在于，-F会在list中的各行文件前，加上-F引入该list的路径，-f则不会对list文件中的内容进行操作，不会加上list文件前的路径，因此，
+-F的文件列表(即-F后的*.list文件)中的文件，支持相对于”-F 路径/文件列表”中指定路径的相对路径；
+ 
+-f则需要list中的文件必须为绝对路径，或者是相对于仿真目录(sim)的相对路径。
+ 
+
+cfg.mk文件
+另外一个文件是bt/RW_REG/cfg下面的cfg.mk。该文件定义了运行时的选项默认值。没有赋值的选项表示在运行时默认不使用。需要使用其中的一些选项。
+第一个是tc，即TestCase，默认使用tc_sanity。
+ 
+第二个是lmn，这个是在运行时生成的log/wave/cov文件的名字，为了区别不同配置和不同tc下生成的文件，使用tc变量名和cfg变量名来标识。
+ 
+第三个是seed，这个是种子，用来产生随机数的。严格地说产生的是一些伪随机数。验证环境会根据种子利用一定的算法产生一系列具有随机特性的数据，用于验证。目前在计算机中真正的随机数是做不到的。该默认值可以随便给，注意一下是一个8位数即可。这里给出了“88888888”的默认种子。
+ 
+第四个是pl，即print level，是打印等级。这是由于在环境中的打印分了若干个等级，可以设置一个门限，只有等级高于门限才打印出来。这样就可以根据需要选择是否查看一些等级比较低的信息（这些信息大多数不太重要）。这个门限就是pl。在前期调试时需要把门限拉低一点，这样可以使不漏掉一些信息。
+这里需要解释一下什么是打印等级？ 
+UVM打印级别设置的意思是将代码中指定的打印级别和在terminal命令中设置的UVM_VERBOSITY级别比较，如果前者大于后者就不打印，UVM_LOW级别大于UVM_NONE，所以不打印，可以关掉。如果前者小于后者就打印，UVM_LOW级别小于UVM_HIGH，所以如果UVM_VERBOSITY设置成UVM_HIGH，那么代码中UVM_LOW相关的打印是关闭不掉的。跟字面逻辑理解上相反，需要注意。
+ 
+第五个是wave。wave是波形产生的格式。如果是使用verdi查看波形，则设置波形格式为fsdb，如果是使用dve查看波形，则设置波形格式为vpd。我使用的是verdi。
+ 
+第六个是udr，udr指向运行参数的配置文件。我们的配置文件一般放在bt/RW_REG/tc/args下面，并且以cfg为后缀名。另外需要在cfg.mk里面定义一个默认cfg。
+ 
+ 
+utils文件
+在生成好环境之后，可以注意到，在common文件夹下的utils文件夹下，多出了3个utils。这个就是建立的utils的文件。每个utils的src文件夹下包含了多个sv文件。下面就对这些文件作出解释。
+Dec文件：参数或者宏定义的文件，一个Utils包含一个dec文件，定义该Utils下所要用到的所有宏和参数。这个Dec文件在tb.f文件中必须放在下列所有文件之前。
+Xaction文件：xaction文件里面用于定义数据结构，这个数据结构是站在上层考虑的。比如cpu读写，站在上层考虑，不会有太多的信号，而是只是一个包含这样几个元素的集合：读/写、地址、数据。这三个元素就能完整地刻画cpu想要执行的事情。数据结构中变量的约束也是在这个文件中定义。一个bus_xaction数据结构如下图：
+ 
+这里定义了数据、地址以及读写操作。
+Driver文件：这个文件是把数据包转化成为时序的文件，该文件完成了数据结构到信号时序之间的转换。一个Driver中处理包到时序的task如下（这里用的是别人DT003的例子，主要是为了熟悉环境）：
+ 
+Monitor文件：和Driver文件相对，是把信号时序采集成数据包的文件。一个Monitor采集时序并打包的task如下：
+ 
+在这里看到monitor一直在采样data_out（这个信号是什么意思？熟悉DT003的人应该不会陌生，这里不再赘述）并将它打包。
+关于这个monitor还有一点需要注意：此处monitor会不断的检测vld_out信号（这个信号是什么意思？熟悉DT003的人应该不会陌生，这里不再赘述），一旦检测到该信号无效，那么就会跳出while（1）循环。但是在有一些monitor中，这里的wahile（1）循环并没有break机制，这是为什么呢？在海思集成的APB的VIP中我就发现了这个情况，如下图所示： 
+上图中的while（1）便是一个死循环一旦运行到这个地方函数便不会停止。
+为此纠结了好久，以为这是一个人家的一个bug，因为一旦这个函数挑不出来那么它之后的函数不就运行不了了吗？要搞清楚这个问题，得要弄清楚UVM的运行机制，分析之后，你会发现他是不会影响我们的验证环境的执行的。
+下面介绍下UVM的运行机制：
+UVM中的phase按照其是否消耗仿真时间可以分为两大类，一类是function phase，如build_phase、connect_phase等。另外一类是task phase，如run_phase等，它们是消耗仿真时间的，如下图所示：
+ 
+上图中，绿色的部分为task phase，上面的while（1）循环便在task phase中这是一个task phase，run_phase和后面12个小phase是并行启动的，后面的小phase是串行执行的；把run_phase分12个小phase的目的是：首先通过细分在不同的phase做不同阶段的事可以实现对DUT更精确的控制；其次每个component相同的phase是同步执行的，只有所有component的reset_pahse执行完才能进入下一个phase，所以这样的运行机制可以很好的解决同步问题；
+下面再来谈一下phase的执行顺序：
+build_phase：
+UVM的设计哲学就是在build_phase中做实例化的工作，从UVM的树形结构（关于UVM的树形结构，不想多说了）来思考，可以想象build_phase肯定是自上而下执行的，不可能会有其他的执行方式。
+其他的不消耗仿真时间的phase
+这些phase都是自下而上执行的，如connect_phase系统会先执行driver和monitor的connect_phase，再执行agent的connect_phase。
+具有兄弟关系的component
+具有兄弟关系的component，他们的执行顺序是按照字典序来执行的，如monitor和driver，如果monitor在实例化时候的名字是aaa，driver在实例化时候的名字是bbb，那么那么就会先执行monitor的build_phase再执行driver的build_phase。（这个顺序是在UVM-1.1d中找到的，UVM并没有保证一直是这个顺序。如果要求必须限制性driver的build_phase，再执行monitor的build_phase，那么应该立即修改UVM的代码，杜绝这种依赖性在代码中出现）
+task_phase
+类似于run_phase、main_phase等task_phase也都是按照自下而上的顺序执行的，但是与function phase自下而上的执行顺序不同的是，这种task_phase是耗费时间的，所以它并不是等到“下面“的phase执行完才执行上面的phase，二是将这些通过fork……join_none的形式全部启动。所以更准确地说法是自下而上的启动，同时在运行。
+说了这么多，可以得出结论，如果monitor的run_phase一直在运行，对整个环境的运行没有半毛钱影响。
+Interface文件：driver和monitor都会和时序打交道，那它们是怎么引用到具体的信号的呢？答案就是interface。Interface提供了这些信号的接口。
+interface这个component设计到两种连接一种是interface和DUT的连接，采用的是config_db机制。另一种是interface和agent的连接采用的是FIFO机制，关于FIFO机制这里也不再赘述。关于config_db机制和FIFO机制，这里就不再赘述，因为所有的组件之间的连接superbench也已经做好了，要搭建一个环境其实根本不需要掌握这两种机制，这里就不再赘述（其实我自己也掌握的不是很全面）。
+当然还有其他的cfg结尾的文件和agent文件等。这些文件留作后面解释。
+env文件：SuperBench生成的主要env文件放在bt/RW_ENV/env文件夹下。下面就对一些主要文件作出解释。
+Env文件：这个文件是环境的核心，在env文件中例化了各个utils，并完成各个utils、RM、checker的连接。
+Rm文件：实现与DUT相同功能的文件。
+Checker文件：比对结果的文件。
+最后再解释下sequence，sequencer以及driver之间的关系，只有理解了他们之间的关系，才能写出tc，不然依别人的葫芦画自己的瓢，真的很痛苦也得不偿失。
+下面来整理以下，sequencer、sequence、driver、agent之间的关系：（这里用的是张强的书《UVM实战》里面的例子）
+sequence-------------------sequencer--------------------driver
+    弹夹-------------------------手枪---------------------扣动扳机的人
+首先，sequencer和driver之间是怎么连接起来的？
+答案是在agent中通过connect函数连接，代码如下：
+function void my_agent::connect_phase(uvm_phase phase);
+   super.connect_phase(phase);
+   if (is_active == UVM_ACTIVE) begin
+      drv.seq_item_port.connect(sqr.seq_item_export);   //通过connect将driver中的seq_item_port与sequencer中的seq_item_export连起来
+   end
+   ap = mon.ap;
+endfunction
+紧接着一个问题是sequence如何向sequencer中送出transaction呢？看下面env中的代码，
+task my_env::main_phase(uvm_phase phase);
+   my_sequence seq;                                          //创建一个my_sequence的实例seq
+   phase.raise_objection(this);                           //在UVM中，objection一般伴随着sequence
+   seq = my_sequence::type_id::create("seq");
+   seq.start(i_agt.sqr);                                          //调用start任务，将产生的transaction交给i_agt.sqr这个sequencer。
+   phase.drop_objection(this);
+endtask
+下面详细解释下下面一段代码，这段代码，解释了transaction并不是随时产生的。
+task my_driver::main_phase(uvm_phase phase);
+   vif.data <= 8'b0;
+   vif.valid <= 1'b0;
+   while(!vif.rst_n)
+      @(posedge vif.clk);
+   while(1) begin
+      seq_item_port.get_next_item(req);    
+      drive_one_pkt(req);
+      seq_item_port.item_done();
+   end
+endtask
+这里为什么会有“seq_item_port.item_done();”这段代码呢？这是因为以下两个原因：
+1）当driver使用get_next_item得到一个transaction的时候，sequencer自己也保留一份刚刚发出的transaction，当出现sequencer发出了transaction而driver没有接收到的情况时sequencer会把保留的这份transaction再发送出去，sequencer如何知道transaction已经发送出去了呢？就看item_done是否被调用？
+2）在sequence中，向sequencer发送transaction使用的是uvm_do宏，这个宏什么时候会返回呢？等待driver返回item_done信号。
+通过以上的叙述，如果要启动一次仿真，首先肯定要在tc中新建一个sequence，这个sequence里面包含了要进行的操作，然后squence通过sequencer启动将要发送的激励通过driver发送到环境和DUT里面去，具体的过程结合下图来看会理解得更加具体。
+ 
+1.4	SuperBench环境运行
+1.4.1	环境编译及运行指令
+SuperBench环境框架搭建好之后，可以试着编译与运行一次，虽然此时没有给任何激励，但是也可以发现一些没有意料到的环境的问题。
+无论编译与运行，都是在bt/RW_REG/sim下进行。这里首先介绍一些运行指令。
+首先是编译指令。
+make cmp
+该命令与make compile是相同的，用来编译环境。编译的过程是把sv语言转换成机器识别的二进制语言的过程，在这个阶段会读入tb.f文件中的文件。
+其次是运行指令。
+make run
+make batch_run
+make ncrun
+这三个指令都可以执行运行指令。它们之间的不同在于make run不仅仅运行，其还包含了编译；而make batch_run只是运行，其也必须要在make cmp编译后才能使用；make ncrun为增量编译和运行。
+实际情况使用较多的为make cmp、make run、make batch_run。特别是在写完一个新模块后，建议使用make cmp先编译，通过后再使用make batch_run运行。
+这里引申一点，在执行运行指令的时候是可以带参数的。cfg.mk文件里面定义了运行的默认参数，但是在使用过程中可以直接指定某一些参数，中间用空格隔开。比如
+make batch_run cfg=XXXX tc=XXXX
+make run cfg=XXXX tc=XXXX
+1.4.2	编译与运行结果的查看
+在编译或者运行完成后，当然可以在终端看到相应的信息，但是这非常不方便，而且其也只能存有限的信息。实际上，在编译运行后，在bt/RW_REG/sim文件夹下就生成了base_fun这个文件夹，在base_fun文件夹里面有log文件夹，里面就有编译和运行log。log的名字如果没有在运行时指定，则为cfg.mk文件中指定的默认名字。
+到此为止，我们知道了如何查看log。如果在编译或者运行时出错，错误会在log中给出，我们就可以愉（痛）快（苦）地开始定位了。
+2	集成RAL到验证环境
+2.1	RAL的概念
+使用nManager生成另外一些.sv文件用于验证环境的寄存器验证。这些文件就是RAL。
+2.2	RAL文件的生成
+打开设计时做好的nManager，点击Generate Code And Document。
+ 
+勾选ralf file，如果是在设计的时候需要勾选的是RTL file。
+ 
+点击齿轮按钮进行配置，配置参数如下：
+ 
+点击ok生成ralf文件。可以在指定目录看到3个文件。 
+上传这3个文件到bt/RW_REG/reg。但是这3个文件并不全能直接用于验证平台，这3个文件中的macro文件，即宏定义文件可以直接使用。另外两个文件只是包含了nManager的寄存器信息，其后缀是ralf。因此需要对文件进行一些转换。很有幸，有前辈写了一个脚本，可以直接对文件进行转换。该脚本可以在/data/HiMDDRCV500/x00357038/RW_REG_1/verification/bt/RW_REG/reg下拷贝，脚本名字为reg_ralgen.pl。拷贝这个文件到你本地的/bt/XXX/reg。
+另外，需要在bt/RW_REG/reg文件夹下新建一个文件ral.ini。文件的内容大致如下：
+ 
+其中，RW_REG_CFG后面的路径要定义到自己的寄存器组路径。名字都是自己写代码时命名的，都是在模块名前面添加U_，指的是例化的模块名，记得是大写，所以应该没难度。如果实在不清楚，可以在Verdi里面看各个模块的例化名。
+万事俱备，只欠东风。最后一步，就是运行脚本生成RAL文件了。命令如下：
+reg_ralgen.pl -uvm
+运行完脚本后，就可以看到在文件夹下生成了另外两个文件。
+ 
+至此，RAL文件就生成完成了。
+2.3	RAL文件与环境的连接
+在前面已经生成了RAL文件，现在就需要把RAL文件集成到环境中去。
+首先的问题是环境怎么找到RAL文件呢？如果仔细阅读过前面的内容的话，应该不难想到：需要把生成的文件添加到tb.f当中去。需要注意的是，添加的顺序是有讲究的，macro文件必须在另外两个文件之前，至于原因，在tb.f里面已经讲到过，这里不再重复。
+现在有另外一个问题，就是环境如何使用RAL。
+实际上，环境中的文件有使用RAL，只是在SuperBench生成环境时，它并不知道生成的RAL的名字，因此都统一用reg_block_XX来表示，在文件中引用。这里的XX是自己生成的，可以在env文件夹下的XX_env.sv查看。
+因此，现在要做的是替换这个名字到生成的RAL的名字。那么生成的RAL的名字是什么呢？可以在ral_TOP_RW_REG.sv最后一个class查看，比如说是：
+ 
+现在需要替换这些名字。当然可以手动替换，但是这里推荐一个软件：suball。这个软件可以执行批量替换。首先是安装这个软件。
+ma suball/1.0
+需要替换的文件在env下面，因此目录跳转到env，在这里执行替换命令：sub_all ./’*.sv’  reg_block_RW_REG ral_sys_RW_REG
+需要注意的是，替换和被替换的名字一定是自己环境中和RAL中的名字，查看查看方式上面已经说明。
+应该会有3个文件的内容被替换，会在终端中给出。
+问题是在RAL中定义了顶层，是以一个宏定义给出的，需要把该宏定义指向实际的顶层，也就是harness。
+首先新建一个宏定义文件，位置其实无所谓，但是建在common下的prj_com文件夹下。文件名为pub_define.sv。其内容定义如下：    
+ 
+然后需要把pub_define.sv添加到tb.f中。添加方法不再重复。位置可以放在最上面。
+至此，就完成了RAL文件与环境的连接，在环境中例化的RAL就能实实在在指向nManager生成的内容。
+3	添加海思自研的APB的VIP
+APB是经常用到的总线系统，这几个都有比较成熟的VIP供我们使用，下面介绍介绍一下如何集成这些VIP，以及一些注意事项。
+事实上，这些VIP已经被IP-Store部门给简单重封装了一下（封装成uvm_agent），可以直接下载使用。但是封装的程度不是很高，而且没有结合RAL来集成，给使用上带来很大不便。而且从IP-Store下载代码还很麻烦。这里从头到尾给出示范，流程如下：
+3.1	注册IP-Store
+  第一次使用IP-Store需要注册，网址：http://rnd-ipstore.huawei.com/index.action
+步骤如下：
+1、进入后，点开Project页面：
+ 
+2、创建项目或者加入项目
+如果右侧my project里面没有项目，则你需要加入或者创建project.
+从搜索框中可以搜索project，如果project已经被人占用，则需要第一个创建人把你加进去。具体流程可以请教IP-Store维护人员。下面只给出截图，大家看字面意思就知道如何操作了。搜索project：
+ 
+创建新的Projext：
+ 
+ 
+已经创建的Project加入新成员：
+ 
+3.2	在工作站terminal下载VIP代码
+步骤如下：
+1、在工作站terminal执行”stb”，弹出STB图形化界面
+ 
+2、点击下图中的红圈按钮
+ 
+3、等待进度条完成后，选择要下载的VIP
+ 
+进度完成后，弹出如下画面：
+ 
+4、这里选择UVM的synopsis的AXI、AHB、APB VIP下载即可（也有其他的VIP哦，自己根据需要下载）：
+ 
+选择好下载路径：
+ 
+5、点击checkout下载：
+ 
+下载完成后，在指定目录下就会有对应VIP的filelist和一个调试代码：
+ 
+3.3	环境中集成VIP
+首先来看看到底下载了什么东东？
+ 
+在这里的重点要说明的是apb_interface_agent.list文件，望文生义，可以推测这里应该是某个文件的路径，打开该文件，内容如下：
+ 
+打开该路径文件以及文件发现该路径下有如下文件：  
+从这里可以看出这实际上就是一个/verification/utils，里面的一个组件，那么只需要在环境中将先前的interface以及reg_agent替换掉就可以了，先前已经介绍了superbench的架构，这里就不再赘述。
+4	harness相关
+4.1	harness对模块的例化与连接
+harness其实是一个module，这个module完成了interface与DUT的连接，相当于让DUT的信号引出来，对环境是可视的。从而验证环境可以查看DUT的信号（包括内部信号），也可以对DUT的信号进行驱动。通俗一点来说，harness完成了DUT与验证环境的桥接。当然从module层面上看，harness是一个顶层。
+在harness里面例化一个DUT，比如QOS_REG U_QOS_REG，实际上，SuperBench已经完成了该模块的例化。
+另外，SuperBench还例化了所有utils的interface。没有什么疑义，因为需要在harness里面完成这个连接。
+需要在harness里面完成DUT与interface的连接。并完成interface和DUT的连接。这个连接和做设计时候在顶层的连接没有区别。可以认为是在顶层对不同的module进行连接，如下图所示：
+ 
+ 
+ 
+4.2	时钟和复位信号的产生
+除连接各个模块之外，时钟信号和复位信号也是由harness产生，是全局共用的信号。
+时钟的产生程序如下图所示：
+ 
+时钟的基本要素是周期（频率）和初始相位。当然还有抖动之类的特性，不过在我们的环境中不涉及。因此，首先定义一个realtime型的变量作为其周期，单位为ns。然后调用`stb_clk_gen这个宏。这个宏就是用来产生时钟的。里面的第一个变量为时钟的名字，第二个变量为时钟的初始相位，第三个就是是时钟的周期了，第四个是占空比。
+然后是复位信号，复位信号的产生也是利用SuperBench提供的宏，大致如下：
+ 
+第1个变量是复位信号的名字，第二个变量是复位有效的开始时间，第三个变量是复位结束的时间。需要注意的是，这里的时间都是指仿真时间。
+4.3	环境的启动
+不得不说的是，harness是优先于环境运行的。就是说harness先完成模块的连接，然后才启动整个环境。在harness的最后有一个全局的函数run_test()。这个全局函数就标志着环境运行的开始。
+5	测试
+5.1	UVM RAL寄存器自动测试
+5.1.1	gloden测试用例介绍
+UVM_RAL提供了很多gloden测试用例，具体介绍如下：
+hw_reset：
+目的：检测寄存器的复位值是否正确，
+测试步骤：1、复位RAL的mirror以及desire的值；
+2、通过前门操作自动遍历读所有的寄存器；
+3、最后将读出来的值和寄存器描述文件中的预期复位值比较判断。
+bit_bash：
+目的：从低到高遍历所有bit位的可读写属性。
+测试步骤：1、读寄存器默认值；
+2、前门对最低bit写1；前门读校验；
+3、前门对寄存器写默认值，读校验；
+4、重复2~3遍历寄存器的所有bit位。
+5、重复1~4遍历所有寄存器
+mem_walk：
+目的：验证全部存储器的读写访问。可检查比特位不可读写的问题，地址问题。
+测试步骤：1、写一个~K（非K值）给地址K；
+2、如果K大于0，读地址（K-1）,并和~（K-1）比较判断；
+然后写（K-1）值给地址（K-1）
+3、如果达到末位地址，读地址K，并和~K比较判断；否则K++，跳回步骤1
+（why？）
+reg_access：
+目的：验证（遍历）存储器的连接正确性（前门+后门），包含地址出错问题。但是不能检测RO类型RAM（为什么呢？因为涉及到前门的写操作）；最好屏蔽掉，否则报错。
+测试步骤：1、前门写一个复位值取反的值给寄存器
+2、后门读寄存器，并比较判断
+3、后门写复位值给寄存器
+4、前门读寄存器，并比较判断
+mem_access：
+目的：验证（遍历）存储器的连接正确性（前门+后门），包含地址出错问题。
+不能检测RO类型RAM；最好屏蔽掉，否则报错。
+测试步骤：1、前门写一个随机值给mem
+2、后门读mem，并比较判断
+3、后门写（随机值取反）给寄存器
+4、前门读寄存器，并比较判断
+shared_access：
+目的：验证共享寄存器或MEM的连接正确（前门+后门），验证多个domain之间的共享的一致性。
+测试步骤：过程参考reg_access(blk,log)，区别是通过一个domain操作，另个一个domain验证
+5.1.2	自动测试用例的写法
+在UVM源代码如下路径里，存放有寄存器测试代码：uvm-1.1d/src/reg/squences/，如下图所示，关键是怎样去调用这些squences。
+ 
+以hw_reset的测试用例为例，参考前辈的资料，我山寨了一个万能的测试用例，下面详细说明一下这个用例：
+ 
+第51行的字符串就为gloden测试用例的sequence。所有的用例除了用例名字不同，就这个地方调用的sequence不同。
+他的具体的原理是什么呢？
+通过字符串，利用create_object_by_name函数来声明一个sequences。这个sequences本来已经定义好放在源码中。将验证环境中的regmodel传入这个sequences中，然后通过start函数由env.vsqr.bus_sqr_0这个sequencer来启动这个sequence，完成整个寄存器测试过程。
+其实真正要讲清楚这个测试用例需要结合具体的环境和代码详细解释，因为这只是我个人的一个特殊环境，讲起来也没有什么作用，这里只是稍微提一下。
+5.2	自己构建的测试用例
+很多时候需要自己构建用例来对寄存器进行读写，他的写法如下，这里只介绍sequence中的task函数body的写法，如下图所示：
+ 
+如上图所示在第81到第95行都是分别调用不同的函数对寄存器进行操作，一目了然，多说反而鸡肋。
