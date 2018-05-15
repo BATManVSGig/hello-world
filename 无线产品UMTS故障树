@@ -1,0 +1,622 @@
+PS掉话（整网级）（Owner：杨淞00353077）			
+	SRB复位		
+		空口质量差	
+			话务量增长
+			外部干扰
+			H业务用户数增多
+			高危操作
+		IUB传输问题	
+			IPPOOL 传输丢包
+			非IPPOOL传输丢包
+			IPPOOL传输时延大
+			非IPPOOL 传输时延大
+		高危操作	
+		TOP终端	
+	TRB复位		
+		空口质量差	
+			话务量增长
+			外部干扰
+			H业务用户数增多
+			高危操作
+		传输问题	
+			IPPOOL 传输丢包
+			非IPPOOL传输丢包
+			IPPOOL传输时延大
+			非IPPOOL 传输时延大
+		高危操作	
+		TOP终端	
+	空口无响应		
+		RB重配超时	
+			空口质量差
+			
+			
+			
+			
+			传输问题
+			
+			
+			
+			
+			高危操作
+			TOP终端
+		物理信道重配超时	
+			空口质量差
+			
+			
+			
+			
+			传输问题
+			
+			
+			
+			
+			高危操作
+			TOP终端
+	GTUP LOSS		
+		ECHO口无响应	
+			传输问题
+			
+			
+			
+			
+		收到对端ERR IND消息	
+	FP同步失败		
+		传输问题	
+			IPPOOL 传输丢包
+			非IPPOOL传输丢包
+			IPPOOL传输时延大
+			非IPPOOL 传输时延大
+
+
+PS掉话（单站级）				
+	RF原因掉话			
+		SRB复位&UuNoreply导致掉话		
+			HHO失败导致的掉话	
+				HHO超时
+			DRD失败导致的掉话	
+				盲切配置异常
+				覆盖不一致导致DRD失败
+				DRD小区内径配置不合理
+			FACH态状态迁移异常	
+				FACH拥塞
+				RACH全误码导致
+			软切换异常	
+				软切换超时
+				卫星站点和非卫星站点相互切换掉话
+				基站频偏导致SHO失败掉话
+			传输问题	
+			空口原因	
+				下行弱覆盖
+				RTWP高
+				下行干扰
+				上行弱覆盖
+			TOP终端	
+		上行失步导致掉话		
+			空口质量差	
+				上行弱覆盖
+				RTWP高
+			TOP终端	
+		TRB复位导致掉话		
+			空口质量差	
+				弱覆盖
+				RTWP高
+			传输异常	
+				传输配置异常
+				传输质量差
+				
+				
+				
+				
+			TOP终端异常	
+		RF类other原因导致掉话		
+			主动链路重建失败	
+		非RF原因掉话		
+			GTPU异常	
+				ECHO检测失败
+				核心网发ERR IND
+			小区过载	
+			OM干预	
+				载波关断
+			抢占导致	
+			UTRAN产生的原因	
+		其他原因掉话		
+			FP同步失败	
+
+
+CS掉话（整网级）
+&&CS Call Drop (network-level)			
+	"SRB复位
+&&SRB reset"			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量增长
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+			"存在相关操作
+&&Related operations"	
+	"RB重配超时
+&&RB Reconfiguration Timeout"			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量增长
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+			"存在相关操作
+&&Related operations"	
+	"物理信道重配超时
+&&Physical Channel Reconfiguration Timeout"			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量增长
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+			"存在相关操作
+&&Related operations"	
+	"等CELL_DCH用户小区更新确认消息超时
+&&CELL_DCH user cell update confirmation message times out."			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量增长
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+			"存在相关操作
+&&Related operations"	
+	"等CELL_FACH或者CELL_PCH小区更新确认消息超时
+&&CELL_FACH or CELL_PCH cell update confirmation message times out."			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量增长
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+			"存在相关操作
+&&Related operations"	
+	"等小区更新消息超时
+&&Cell update message times out."			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量增长
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+			"存在相关操作
+&&Related operations"	
+	"上行同步失败
+&&UL synchronization failure"			
+		"空口恶化
+&&Air Interface Deterioration"		
+			"话务量上涨
+&&The traffic volume increases."	
+			"外部干扰
+&&External interference"	
+			"高危操作
+&&Potentially Service-Affecting Operations"	
+		"TOP终端
+&&TOP terminal"		
+		"高危操作
+&&Potentially Service-Affecting Operations"		
+	"IUUP Fail
+&&IUUP Fail"			
+		"IUUP超时
+&&IUUP timed out."		
+			"IUCS口传输丢包
+&&IUCS interface transmission packet loss"	
+				"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"
+				"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"
+				"IPPOOL传输时延大
+&&IPPOOL large transmission latency"
+				"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"
+			"核心网未响应
+&&The core network does not respond."	
+		"收到对端NACK消息
+&&After receiving the NACK message from the peer end"		
+			"核心网问题
+&&Fault on the core network (CN)"	
+	"FP同步失败
+&&FP synchronization fails."			
+		"传输问题
+&&The transmission is faulty."		
+			"IPPOOL 传输丢包
+&&IPPOOL transmission packet loss"	
+			"非IPPOOL传输丢包
+&&Non IPPOOL transmission packet loss"	
+			"IPPOOL传输时延大
+&&IPPOOL large transmission latency"	
+			"非IPPOOL 传输时延大
+&&Non-IPPOOL large transmission latency"	
+
+
+		"FAQ
+&&FAQ"		
+	"RL上行失步
+&&RL out-of-synchronization in the uplink"			
+		"空口质量差
+&&Poor radio interface quality"		
+			"空口弱覆盖
+&&weak coverage"	
+			"话务量增长
+&&traffic growth"	
+			"邻区漏配
+&&missing neighbor"	
+			"存在外部干扰
+&&external interference"	
+			"用户数多导致上行RTWP高
+&&high RTWP due to other subscriber within 3G"	
+		"FAQ
+&&FAQ"		
+	"空口流程失败
+&&radio interface process failure"			
+		"空口流程超时
+&&radio interface process timeout"		
+			"空口质量差
+&&Poor radio interface quality"	
+				"空口弱覆盖
+&&weak coverage"
+				"空口弱覆盖
+&&weak coverage"
+				"话务量增长
+&&traffic growth"
+				"邻区漏配
+&&missing neighbor"
+				"存在外部干扰
+&&external interference"
+				"用户数多导致上行RTWP高
+&&high RTWP due to other subscriber within 3G"
+			"传输问题
+&&IUB transmission faulty"	
+			"基站频偏导致SHO ASU超时
+&&Frequency Offset in NodeB lead to SHO ASU timeout"	
+			"空口流程定时器设置太短
+&&radio interface process timer is too short"	
+			"扰码冲突
+&&PSC Conflict"	
+		"空口流程交叉
+&&radio interface process overlap"		
+			"安全模式和小区更新交叉
+&&security mode process overlap with cell update"	
+			"安全模式和小区更新交叉
+&&security mode process overlap with cell update"	
+			"安全模式和小区更新交叉
+&&security mode process overlap with cell update"	
+		"宽带AMR场景下核心网使用二次指派导致CS掉话增多
+&&CS Core Network use 2nd RAB Assignment during WAMR setup"		
+		"TOP UE导致
+&&TOP UE"		
+			"终端解调性能差
+&&demodulation performance of the terminal is poor"	
+			"终端在打开LCS功能后异常掉话
+&&terminal abnormal call drops after the LCS function is enabled"	
+		"FAQ
+&&FAQ"		
+	"IUUP异常
+&&IUUP initialization failure"			
+		"IUUP初始化超时
+&&IUUP initialization timed out"		
+		"IUUP初始化对端核心网回复NACK
+&&IUUP initialization fail due to receive NACK from CS Core Network"		
+		"FAQ
+&&FAQ"		
+	"码冲突
+&&code conflict"			
+		"DRNC侧码冲突
+&&code conflict in DRNC side"		
+		"压模后码冲突
+&&code conflict after compressed mode started"		
+		"码树调整触发
+&&code conflict during code tree adjustment"		
+		"FAQ
+&&FAQ"		
+	"操作导致掉话
+&&CS call drop due to operation"			
+		"小区去激活操作导致掉话
+&&CS call drop due to cell deactivation"		
+		"添加小区级链路重建参数后掉话
+&&CS call drop due to ADD UCELLRLREESTSWITCH"		
+	"被抢占掉话
+&&CS call drop due to preempted"			
+	"FAQ
+&&FAQ"			
+	"H用户数不足导致链路重建失败掉话
+&&CS call drop due to insufficient HSDPA/HSUPA user number resource during call reestablishment"			
+	"IUR流程异常掉话
+&&Abnormal IUR-related process"			
+		"静态迁移入后因RB RECFG空口流程超时掉话
+&&RB RECFG process timeout after static relocation"		
+		"IUR口无法发起软切换掉话
+&&SHO-adding RL fail across IUR"		
+		"对端贝尔DRNC的上行信令直传消息没有携带DRNTI导致掉话
+&&No DRNTI in UPLINK SIGNALLING TRANSFER INDICATION message from Bell DRNC"		
+		"对端贝尔不支持HSUPA over IUR导致无法跨IUR添加RL
+&&SHO-adding RL fail across IUR due to Bell DRNC not support HSUPA over IUR"		
+	"UE二次接入导致的感知掉话
+&&UE send RRC connection setup request to UTRAN while UTRAN keep its previous RRC connection"			
+	"FP同步失败掉话
+&&Call drop due to IUB FP synchronization failure"			
+		"IUB传输问题
+&&IUB transmission faulty"		
+
+
+
+
+
+
+
+
+
+RRC接入问题（单站级）				
+	RNC拒绝导致RRC失败			
+		上行CE拥塞		
+			业务量大导致	
+			操作导致	
+			软件缺陷/硬件故障	
+			传输导致用户残留	
+		下行CE拥塞		
+			正常业务量大导致下行CE拥塞	
+			下行小区分布不均	
+		上下行IUB带宽拥塞		
+			ATM传输CID资源不足	
+			IP传输业务量导致的拥塞	
+		上行功率拥塞		
+			业务量大导致等效用户数超限	
+			小区进入OLC状态	
+			RTWP高	
+		下行功率拥塞		
+			RL初始功率设置过大	
+			导频功率设置过大	
+			RRU降额	
+			业务量大导致下行功率拥塞	
+		RL FAIL导致		
+			CCP端口号配置不一致导致	
+			CCP配置的VCI/VPI配置不一致	
+			IP中间传输丢包	
+				IUB口IPPOOL存在丢包
+				IUB口IPPATH存在丢包
+			ATM中间传输丢包	
+			CPU严重过载	
+			CNBAP过载	
+			基带过载	
+			128用户数	
+			RG信道和HSUPA用户数不匹配	
+			RL Other失败	
+		码字拥塞		
+			业务量大导致码子拥塞	
+			HSPA+业务与压模共存	
+		NodeB资源不可用		
+			DCH用户超128限制	
+		other类拥塞		
+			CPU严重过载	
+			CNBAP过载	
+			基带过载	
+			RNC流控	
+			Cell broken	
+		other类拒绝		
+			FACH用户数超限	
+	空口无响应导致RRC失败			
+		配置类原因		
+			2条SCCPCH边界	
+			SCCPCH的CTFC配置错误	
+			FACH的RLCSIZE配置错误	
+			MACPDUSIZE配置错误	
+			FACH发射功率大	
+			SLOTFORMAT配置错误	
+			RNC侧未打开STTDIND	
+			RNC未打开STTDSUPIND	
+			PRACH信道缺少CTFC=0的ADD UPRACHTFC命令	
+			BBP板的WM不为FDD	
+		空口原因		
+			弱覆盖	
+			下行干扰	
+			扰码冲突	
+		TOP终端		
+		FACH拥塞		
+		RTWP高		
+			业务量大	
+			外部干扰	
+		RRU后级及天线问题		
+			直放站影响	
+			DAS系统原因	
+		传输检查和分析		
+			ATM传输存在丢包	
+			双栈传输	
+			IP非POOL传输	
+			IPPOOL传输	
+	其他原因导致的RRC失败			
+		FP同步失败		
+
+
+RRC REJECT			
+	码资源拥塞		
+		R99用户增多	
+		操作所致	
+		单信令增多	
+		HSPA+业务与压模共存	
+	上行CE拥塞		
+		2ms HSUPA用户增多	
+		操作所致	
+		业务量增多	
+	下行CE拥塞		
+		R99用户增多	
+		操作所致	
+		单信令增多	
+		业务量增多	
+	上行功率拥塞		
+		业务量大导致等效用户数超限	
+		业务量增多	
+		操作所致	
+		2ms HSUPA用户增多	
+		RTWP攀升	
+	下行功率拥塞		
+		RL初始功率设置过大	
+		导频功率设置过大	
+		R99用户增多	
+		操作所致	
+		单信令增多	
+		业务量增多	
+	上行IUB带宽拥塞		
+		ATM传输CID资源不足	
+		操作所致	
+		单信令增多	
+		业务量增多	
+	下行IUB带宽拥塞		
+		ATM传输CID资源不足	
+		操作所致	
+		单信令增多	
+		业务量增多	
+	RL FAIL导致		
+RRC Noreply			
+	NODEB响应超时		
+		传输问题	
+			IUB口IPPOOL存在丢包
+			IUB口IPPATH存在丢包
+		NODEB异常无响应	
+		SCCPCH信道配置错误	
+	UE响应超时		
+		空口恶化	
+		传输问题	
+			IUB口IPPOOL存在丢包
+			IUB口IPPATH存在丢包
+		远距离TP接入导致	
+		操作所致	
+		TOP用户或终端导致	
+RRC other类			
+	license受限		
+		业务量增多	
+		license替换	
+	FP同步失败		
+		传输问题	
+			IUB口IPPOOL存在丢包
+			IUB口IPPATH存在丢包
+	流控		
+		SPU流控	
+			业务量增多
+			操作所致
+			传输闪断
+		MPU流控	
+			业务量增多
+			操作所致
+			传输闪断
+		CALL SHOCK流控	
+			业务量增多
+			操作所致
+			传输闪断
+		一体化流控（一阶段）	
+			业务量增多
+			操作所致
+			传输闪断
+			NODEB异常
+		一体化流控（二阶段）	
+			业务量增多
+			操作所致
+			传输闪断
+			NODEB异常
+
+
+
+
+
+
+
+
