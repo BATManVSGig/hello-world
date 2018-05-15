@@ -1,0 +1,198 @@
+官方网站资料
+
+https://golang.org
+
+https://github.com/golang/go/wiki
+
+https://github.com/golang/go/wiki/GoTalks
+
+The Go Programming Language（Go语言圣经）
+
+http://www.gopl.io/
+
+https://docs.ruanjiadeng.com/gopl-zh/
+
+一些GO语言的资源
+
+http://awesome-go.com/
+
+========================================
+
+部分中文资料
+
+《学习GO语言》中文版
+
+http://mikespook.com/learning-go/
+
+《Go 编程语言指南》
+
+http://go-tour-zh.appspot.com/welcome/1
+
+《Go 编程语言》基本就是一个官网的中文版
+
+http://zh-golang.appspot.com/
+
+网站教程
+
+GO语言编程 and GO语言开发2048 from 实验楼
+
+Go语言后台应用开发 form 优才网
+
+Go语言第一课 form 慕课网
+
+
+入门书籍
+
+《Go 入门指南》(《The Way to Go》中文版)
+
+《Go 编程基础》
+
+《学习 Go 语言》
+
+《GO 标准库》: Polaris出品，一本有价值的入门书籍。
+
+《Go Web 编程》
+
+《Go并发编程实战》 and 《Go命令教程》由@特价萝卜 出品。
+
+
+视频资料
+
+《Go编程基础》视频教程：由@Unknown 出品，与书籍配套。
+
+《Go Web基础》视频教程
+
+《Go名库讲解》视频教程
+
+社区交流
+
+StudyGolang
+
+Golang中国
+
+Go友团
+
+其他补充
+
+Go学习笔记 by 雨痕大神
+
+Golang在线开发环境 由Go语言中文网和实验楼共同打造，通过浏览器直接访问Golang在线开发环境，进行Go编程。
+
+
+Windows上使用Visual Studio Code工具搭建golang环境
+发表于：2017-01-06 10:51阅读：2375评论：29
+曾冬日 转载了 李远 的博文  【查看原文】
+1.安装GO语言
+请参考我的另一篇博文http://3ms.huawei.com/hi/group/2029033/blog_2206137.html?uid=944641&mapId=3510247，它详细介绍了go语言的安装以及windows下go环境变量的配置。
+ 
+2、安装Git
+Git是Go中主要使用的版本控制工具，使用go get命令时需要git工具
+ 
+下载地址：
+http://git-scm.com/download/
+ 
+一般按照默认设置一路安装即可。
+
+
+ 
+
+
+
+ 
+
+
+
+
+安装Git完毕。
+
+ 
+3、安装Visual Studio Code
+ 
+下载地址：
+https://code.visualstudio.com/
+ 
+
+
+
+
+安装VSCode完毕。
+
+ 
+4.配置vscode以及windows下命令行代理(这点非常重要，不然在vscode无法安装插件以及命令行里无法使用go get拉取代码)
+在vscode工具中 文件/首选项/用户设置/ settings.json中添加如下设置：
+// 将设置放入此文件中以覆盖默认设置
+{ "http.proxy": "http://域账号:域密码@proxyhk.huawei.com:8080",
+  "https.proxy": "https://域账号:域密码@proxyhk.huawei.com:8080",
+ "http.proxyStrictSSL":false,
+ "files.autoSave": "onFocusChange"}
+ 
+前三段是设置你的代理用的，最后一个是设置自动保存功能。
+注意：由于公司防火墙屏蔽了代理，所以需要安装下公司的防火墙版本 HACC_V8.1.12_Setup.rar，解压后1.先运行setup.bat脚本；2.运行HACC_V8.1.12_Setup.exe执行文件
+ 
+至此，你就可以使用vscode安装golang的插件
+ 
+5.安装golang插件
+进入Visual Studio Code界面，使用快捷键Ctrrl+Shift+p，打开命令面板，选择“Extensions: Install Extension”，等待插件名列表的加载。 
+然后在输入框“ext install ”输入go，选择go，点击安装，安装完成后要求重启开发环境，点击重启按钮，自动刷新环境。
+ 
+6.配置插件(这一步比较重要，会提到如何配置在命令行里使用go get拉去代码)
+在命令行里使用go get拉取代码，前提必须安装git以及配置了go path的环境(详见本博文第一条)
+在命令行里设置git的代理，具体内容如下:
+>git config --global http.proxy http://域账号:域密码@proxyhk.huawei.com:8080
+>git config --global https.proxy https://域账号:域密码@proxyhk.huawei.com:8080
+>git config --global http.sslVerify false
+ 
+同样的，需要安装公司的防火墙版本 HACC_V8.1.12_Setup.rar，如果第五部里已经安装了，那这一步就无需安装，至此你就可以直接在命令行下通过go get拉取代码。
+ 
+上面设置完成后，Visual Studio Code的配置选项支持GoLang插件的设置，可以通过用户偏好设置或workspace设置进行配置。在菜单File->Preferences处可以找到。
+1)、点击User Settings
+
+找到
+
+// Specifies the GOPATH to use when no environment variable is set.
+"go.gopath": null,
+如果没有设置GOPATH环境变量，那么这里就该设置。
+
+2)、执行命令
+
+    安装gocode
+
+go get -u -v github.com/nsf/gocode
+ 
+
+安装godef
+
+go get -u -v github.com/rogpeppe/godef
+ 
+
+安装golint
+
+go get -u -v github.com/golang/lint/golint
+ 
+
+安装go-find-references
+
+go get -u -v github.com/lukehoban/go-find-references
+ 
+
+安装go-outline
+
+go get -u -v github.com/lukehoban/go-outline
+ 
+
+安装goreturns
+
+go get -u -v sourcegraph.com/sqs/goreturns
+ 
+
+安装gorename
+
+go get -u -v golang.org/x/tools/cmd/gorename
+ 
+
+3) 使用以上都完成后，开始GoLang开发就很方便了。如图所示： 
+这里写图片描述
+
+ 
+至此，整个步骤都完成了，可以进行golang的开发了。
+HACC_V8.1.12_Setup.rar( 8.66 MB, 673 downs )
