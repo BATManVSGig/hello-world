@@ -1,0 +1,362 @@
+#!/bin/sh
+
+
+typeset scriptName="pptv_url_convert_tool.sh"
+typeset script_path="$(cd "$(dirname "$0")"; pwd)"
+typeset LOG_FILE_DIR=${script_path}/log_pptv
+DEMAND_MP4_NORMAL_URL="demand_mp4_normal_url"
+DEMAND_MP4_RANGE_URL="demand_mp4_range_url"
+DEMAND_MP4_OLD_URL="demand_mp4_old_url"
+DEMAND_M3U8_NORMAL_URL="demand_m3u8_normal_url"
+DEMAND_TS_NORMAL_URL="demand_ts_normal_url"
+LIVE_M3U8_NORMAL_URL="live_m3u8_normal_url"
+LIVE_TS_NORMAL_URL="live_ts_normal_url"
+LIVE_BLOCK_NORMAL_URL="live_block_normal_url"
+ret=""
+
+################################################################################
+#log_echo
+#print log infomation
+#
+#arg1，log level
+#arg2，shell script name
+#arg3，function name in script
+#arg4，line number in script
+#arg5，log infomation
+################################################################################
+function log_echo()
+{
+	[ ! -d ${LOG_FILE_DIR} ] && {}
+    if [ ! -d ${LOG_FILE_DIR} ]; then
+        mkdir -p ${LOG_FILE_DIR}
+    fi
+
+    typeset log_level=$1
+    typeset log_file_name=$2
+    typeset log_function_name=$3
+    typeset log_line_no=$4
+    typeset log_message=$5
+    typeset log_date=$(date +"%Y-%m-%d %H:%M:%S")
+	
+    echo "[${log_date}][${log_level}][${log_file_name}][${log_function_name}][${log_line_no}] ${log_message}" | tee -a ${LOG_FILE_DIR}/convert_url.log
+}
+####取得URL中.MP4文件名
+function GetPath()
+{
+	local url=$1
+	
+    if [ 'echo ${url} | grep -o "?"' ];then
+		url=${url%%\?*}
+		url=${url#http://*/}
+		url="/"${url} 
+    else
+		url=${hurl%%\$*}
+    fi
+	
+	echo $url
+}
+####取得URL中需要的参数的值
+function GetUrlParam()
+{
+	url=$1
+	m_paramKey=$2
+	
+	isExist=`echo "$url" | grep -oE "$m_paramKey=([^&=]+)"`
+	echo "${isExist}"
+}
+
+####点播MP4,带range的URL########
+#实例："http://mobile-3g.vod.pptv.com/0/20480/0/d85766d863c0421f2fd59123764ee4c2.mp4?fpp.ver=1.3.0.23&key=3b348dfb5c04e0ad7e7d83c199cb2e8c&k=48f9a98e6e43bda8215afef1afd2d490-f4d0-1512718009&type=web.fpp&vvid=3989816d-15d7-ce08-97a1-34294e583b66&segment=32b2b7ee_32b25d8e_1512722326&get_drm_header=ture&encrypt=dwdedefef"
+function demand_mp4_range_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	m_segment=`GetUrlParam "${m_urls}" "segment"`
+	m_get_drm_header=`GetUrlParam "${m_urls}" "get_drm_header"`
+	m_encrypt=`GetUrlParam "${m_urls}" "encrypt"`
+	
+	m_urls=`echo $m_urls | sed 's/__\([a-zA-Z0-9][a-zA-Z0-9]\)/%\1/g'`
+	file_name=`echo "$m_urls" | grep -oE '/[0-9]+/[0-9]+/[0-9]+/([^/]+)\.mp4' | awk -F"/" '{print "/"$2"/"$5}'`	
+	new_urls=${host}${file_name}?
+	
+	if [ "X${m_segment}" != "X" ];then
+		new_urls=${new_urls}${m_segment}"&"
+	fi
+	if [ "X${m_get_drm_header}" != "X" ];then
+		new_urls=${new_urls}${m_get_drm_header}"&"		
+	fi
+	if [ "X${m_encrypt}" != "X" ];then
+		new_urls=${new_urls}${m_encrypt}"&"
+	fi
+    new_urls=${new_urls%%\&}
+	new_urls=${new_urls%%\?}
+	echo "${new_urls}"
+	return 0
+}
+
+####点播MP4,不带range的URL########
+#实例"http://mobile-3g.vod.pptv.com/0/d85766d863c0421f2fd59123764ee4c2.mp4?fpp.ver=1.3.0.23&key=3b348dfb5c04e0ad7e7d83c199cb2e8c&k=48f9a98e6e43bda8215afef1afd2d490-f4d0-1512718009&type=web.fpp&vvid=3989816d-15d7-ce08-97a1-34294e583b66&segment=32b2b7ee_32b25d8e_1512722326&get_drm_header=ture&encrypt=dwdedefef"
+function demand_mp4_normal_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	m_segment=`GetUrlParam "${m_urls}" "segment"`
+	m_get_drm_header=`GetUrlParam "${m_urls}" "get_drm_header"`
+	m_encrypt=`GetUrlParam "${m_urls}" "encrypt"`
+	
+	m_urls=`echo $m_urls | sed 's/__\([a-zA-Z0-9][a-zA-Z0-9]\)/%\1/g'` 
+	file_name=`echo "$m_urls" | grep -oE '/[0-9]+/([^/]+)\.mp4'`
+	new_urls=${host}${file_name}? 
+	
+	if [ "X${m_segment}" != "X" ];then
+		new_urls=${new_urls}${m_segment}"&"
+	fi
+	if [ "X${m_get_drm_header}" != "X" ];then
+		new_urls=${new_urls}${m_get_drm_header}"&"
+    fi		
+	if [ "X${m_encrypt}" != "X" ];then
+		new_urls=${new_urls}${m_encrypt}"&"
+	fi
+    new_urls=${new_urls%%\&}
+	new_urls=${new_urls%%\?}
+	echo "${new_urls}"
+	return 0
+}
+
+####点播老格式的MP4 URL########
+#实例："http://mobile-3g.vod.pptv.com/0_d85766d863c0421f2fd59123764ee4c2.mp4?fpp.ver=1.3.0.23&key=3b348dfb5c04e0ad7e7d83c199cb2e8c&k=48f9a98e6e43bda8215afef1afd2d490-f4d0-1512718009&type=web.fpp&vvid=3989816d-15d7-ce08-97a1-34294e583b66&segment=32b2b7ee_32b25d8e_1512722326&get_drm_header=ture&encrypt=dwdedefef"
+function demand_mp4_old_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	m_segment=`GetUrlParam "${m_urls}" "segment"`
+	m_get_drm_header=`GetUrlParam "${m_urls}" "get_drm_header"`
+	m_encrypt=`GetUrlParam "${m_urls}" "encrypt"`
+	
+	m_urlsl=`echo $m_urls | sed 's/__\([a-zA-Z0-9][a-zA-Z0-9]\)/%\1/g'`
+	
+	file_name=`echo "$m_urlsl" | grep -oE '/[A-Za-z0-9]+_([^/]+)\.mp4' | sed 's#\([0-9]\+\)_\([^/]\+\.mp4\)#\1/\2#g'`
+
+	new_urls=${host}${file_name}?
+	
+	if [ "X${m_segment}" != "X" ];then
+		new_urls=${new_urls}${m_segment}"&"
+	fi
+	if [ "X${m_get_drm_header}" != "X" ];then
+		new_urls=${new_urls}${m_get_drm_header}"&"
+    fi		
+	if [ "X${m_encrypt}" != "X" ];then
+		new_urls=${new_urls}${m_encrypt}"&"
+	fi
+	new_urls=${new_urls%%\&}
+	new_urls=${new_urls%%\?}
+	echo "${new_urls}" 
+	return 0
+}
+
+####点播格式的ts URL########
+#实例："http://mobile-3g.vod.pptv.com/grdgrdg3432434.ts?fpp.ver=1.3.0.23audio=dssd&video=efef&start=efefsf&during=fefsfe&ts_name=fefesf"
+function demand_ts_normal_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	m_start=`GetUrlParam "${m_urls}" "start"`
+	m_during=`GetUrlParam "${m_urls}" "during"`
+	m_ts_name=`GetUrlParam "${m_urls}" "ts_name"`
+	m_video=`GetUrlParam "${m_urls}" "video"`
+	m_audio=`GetUrlParam "${m_urls}" "audio"`
+	
+	m_urls=`echo $m_urls | sed 's/__\([a-zA-Z0-9][a-zA-Z0-9]\)/%\1/g'` 
+	file_name=`echo "$m_urls" | grep -oE '/([^/]+)\.ts'`
+	new_urls=${host}${file_name}?
+
+	if [ "X${m_start}" != "X" ];then
+		new_urls=${new_urls}${m_start}"&"
+	fi
+	if [ "X${m_during}" != "X" ];then
+		new_urls=${new_urls}${m_during}"&"	
+    fi		
+	if [ "X${m_ts_name}" != "X" ];then
+		new_urls=${new_urls}${m_ts_name}"&"
+	fi
+	if [ "X${m_video}" != "X" ];then
+		new_urls=${new_urls}${m_video}"&"
+	fi
+	if [ "X${m_audio}" != "X" ];then
+		new_urls=${new_urls}${m_audio}"&"
+	fi
+	new_urls=${new_urls%%\&}
+	new_urls=${new_urls%%\?}
+	echo "${new_urls}"
+	return 0
+
+}
+
+####点播格式的m3u8 URL########
+####实例："http://mobile-3g.vod.pptv.com/live/33/34/22.m3u8?fpp.ver=1.3.0.23audio=dssd&video=efef&playback=efefsf"
+function demand_m3u8_normal_url()
+{
+	local m_urls=$1
+		
+	m_urls=`echo $m_urls | sed 's/__\([a-zA-Z0-9][a-zA-Z0-9]\)/%\1/g'` 
+	echo "${m_urls}"
+	return 0
+}
+
+####直播格式的m3u8 URL########
+#实例： "http://mobile-3g.vod.pptv.com/live/333333/857668632/vdvd22.m3u8?fpp.ver=1.3.0.23&audio=3b348dfb5c04e0ad7e7d83c199cb2e8c&during=48f9a98e6e43bda8215afef1afd2d490-f4d0-1512718009&playback=web.fpp&video=3989816d-15d7-ce08-97a1-34294e583b66"
+
+function live_m3u8_normal_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	m_audio=`GetUrlParam "${m_urls}" "audio"`
+	m_video=`GetUrlParam "${m_urls}" "video"`
+
+	m_playback=`GetUrlParam "${m_urls}" "playback"`
+	
+	new_urls=${m_urls%%\?*}?
+	
+	if [ "X${m_audio}" != "X" ];then
+		new_urls=${new_urls}${m_audio}"&"
+	fi
+	if [ "X${m_video}" != "X" ];then
+		new_urls=${new_urls}${m_video}"&"	
+    fi		
+	if [ "X${m_playback}" != "X" ];then
+		new_urls=${new_urls}${m_playback}"&"	
+    fi		
+
+	new_urls=${new_urls%%\&}
+	new_urls=${new_urls%%\?}
+	echo "${new_urls}"
+	return 0
+}
+
+
+####直播格式正常的ts URL########
+####实例"http://mobile-3g.vod.pptv.com/live/33/34/3b34dfb/22.ts?fpp.ver=1.3.0.23audio=dssd&video=efef"
+function live_ts_normal_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	m_audio=`GetUrlParam "${m_urls}" "audio"`
+	m_video=`GetUrlParam "${m_urls}" "video"`
+	
+	file_name=`echo "$m_urls" | grep -oE '/live/[0-9]+/[0-9]+/([^/]+)/[0-9]+\.ts'`
+	[ "$file_name" == "" ] && { file_name=`echo "$m_urls" | grep -oE '/live/([^/]+)/[0-9]+\.ts'`; }
+	new_urls=${host}${file_name}?
+	
+	if [ "X${m_audio}" != "X" ];then
+		new_urls=${new_urls}${m_audio}"&"
+	fi
+	if [ "X${m_video}" != "X" ];then
+		new_urls=${new_urls}${m_video}"&"		
+	fi
+	new_urls=${new_urls%%\&}
+	new_urls=${new_urls%%\?}
+	echo "${new_urls}"
+	return 0
+}
+ 
+####直播格式的block URL########
+#实例："http://mobile-3g.vod.pptv.com/live/3b34dfb/22.block?fpp.ver=1.3.0.23"
+function live_block_normal_url()
+{
+	local m_urls=$1
+	local host=`echo $url | grep -oE "http://[^/]*"`
+	
+	file_name=`echo "$m_urls" | grep -oE '/live/([^/]+)/[0-9]+\.block'`
+	new_urls=${host}${file_name}
+	echo "${new_urls}"
+	return 0
+}
+
+####判断URL的类型
+function  ParseUrlType()
+{ 
+	local rawUrl=$1
+	local filter_url=`GetPath "$rawUrl"`
+
+    ret=`echo "$filter_url" | grep -oE "^/([^/]+)_([^/]+)\.mp4"`
+	[ ! -z "$ret" ] && { echo $DEMAND_MP4_OLD_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/[0-9]+/[0-9]+/[0-9]+/([^/]+)\.mp4"`
+	[ ! -z "$ret" ] && { echo $DEMAND_MP4_RANGE_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/[0-9]+/([^/]+)\.mp4"`
+	[ ! -z "$ret" ] && { echo $DEMAND_MP4_NORMAL_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/live/[0-9]+/[0-9]+/.+\.m3u8"`
+	[ ! -z "$ret" ] && { echo $LIVE_M3U8_NORMAL_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/live/([^/]+)/[0-9]+\.block"`
+	[ ! -z "$ret" ] && { echo $LIVE_BLOCK_NORMAL_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/live/[0-9]+/[0-9]+/([^/]+)/[0-9]+\.ts"`
+	[ ! -z "$ret" ] && { echo $LIVE_TS_NORMAL_URL; return 0;}
+	ret=`echo "$filter_url" | grep -oE "^/live/([^/]+)/[0-9]+\.ts"`
+	[ ! -z "$ret" ] && { echo $LIVE_TS_NORMAL_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/([^/]+)\.m3u8"`
+	[ ! -z "$ret" ] && { echo $DEMAND_M3U8_NORMAL_URL; return 0;}
+
+	ret=`echo "$filter_url" | grep -oE "^/([^/]+)\.ts"`
+	[ ! -z "$ret" ] && { echo $DEMAND_TS_NORMAL_URL; return 0;} 
+}
+
+function AssicCover()
+{
+	local key=$1
+	key=`echo $key | sed 's/%26/\&/g'`
+	key=`echo $key | sed 's/%3D/\=/g'`
+	echo $key
+}
+
+function ParseUrlFile()
+{
+	urlfile=$1
+	savepath=$2
+	>$savepath
+	[ ! -f ${urlfile} ] && { echo "$urlfile isn't exist"; exit 0; }
+	count=0
+	local url_list=`cat ${urlfile}`
+	for url in $url_list;do
+		((++count))
+		url=`AssicCover $url`
+		handle=`ParseUrlType "$url"`
+		[ -z "$handle" ] && { echo "can't parse url:$url"; continue; }
+		ret=`$handle $url`
+		echo "$ret" >> $savepath
+	done
+}
+
+function ParseUrl()
+{
+	local url=$1
+	url=`AssicCover $url`
+	handle=`ParseUrlType "$url"`
+	[ -z "$handle" ] && { echo "can't parse url:$url"; exit; }
+	ret=`$handle $url`
+	echo ""
+	echo "parse result:$ret"
+}
+
+if [ $# -ne 1 ] && [ $# -ne 2 ];then
+	echo "The args num is error!"
+	exit 1
+fi
+
+if [ $# -eq 2 ];then
+	ParseUrlFile $1 $2
+elif [ $# -eq 1 ];then
+	ParseUrl $1
+fi
+
+
