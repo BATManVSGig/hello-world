@@ -1,0 +1,199 @@
+移动端跨平台技术总结
+移动端跨平台技术总结
+日期：2017-05-03 15:05浏览：91评论：0
+概述
+曾经大家以为在手机上可以像桌面那样通过 Web 技术来实现跨平台开发，却因为性能或其他问题而放弃，不得不针对不同平台开发多个版本。这也违背了跨平台开发的初衷。而React Native让跨平台移动端开发在次回到人们的视野中，其成功的原因除了他“一次编写处处运行”，还因为它相比h5等前端技术，有了更接近原生的体验。 
+为了方便理解，笔者将跨平台技术分为4大流派：
+Web 流：也被称为 Hybrid 技术，它基于 Web 相关技术来实现界面及功能
+代码转换流：将某个语言转成 Objective-C、Java 或 C#，然后使用不同平台下的官方工具来开发
+编译流：将某个语言编译为二进制文件，生成动态库或打包成 apk/ipa/xap 文件
+虚拟机流：通过将某个语言的虚拟机移植到不同平台上来运行
+web流
+Web 流，如大家熟知的PhoneGap/Cordova等技术，它将原生的接口封装后暴露给 JavaScript，然后通过系统自带的 WebView 运行，也可以视野自己内嵌Chrome内核。 
+Web 流最常被吐槽的就是性能差，渲染速度慢。现在说到 Web 性能差主要说的是 Android 下比较差，在 iOS 下已经很流畅了。 
+说到性能差，主要原因是在Android和ios的早期设备中，由于没有实现GPU加速，所以造成每次重绘界面的卡顿。 
+而造成渲染慢的第二个原因是：css过于复杂。因为从实现原理上看 Chrome 和 Android View 并没有本质上的差别，但过于复杂的css会加重gpu的负担。那是不是可以通过简化 CSS 来解决？实际上还真有人这么尝试了，比如 Famo.us，它最大的特色就是不让你写 CSS，只能使用固定的几种布局方法，完全靠 JavaScript 来写界面，所以它能有效避免写出低效的 CSS，从而提升性能。 
+造成绘制缓慢的第三个原因是，业务需求的复杂，如要实现超长的 ListView商品展示。因为 DOM 是一个很上层的 API，使得 JavaScript 无法做到像 Native 那样细粒度的控制内存及线程，所以难以进行优化，则在硬件较差的机器上会比较明显 
+上面三个问题现在都不好解决。其实除了性能之外，Web 流更严重的问题是功能缺失。比如 iOS 8 就新增 4000+ API，而 Web 标准需要漫长的编写和评审过程，而等到web审核通过，即便是Cordova这样的框架自己封装也是忙不过来的。所以为了更好地使用系统新功能，Native是最快的选择。 
+虽然前面提到 HTML/CSS 过于复杂导致性能问题，但其实这正是 Web 最大的优势所在，因为 Web 最初的目的就是显示文档，如果你想显示丰富的图文排版，虽然 iOS/Android 都有富文本组件，但比起 CSS 差太远了，所以在很多 Native 应用中是不可避免要嵌 Web 的。
+代码转换流
+不同平台下的官方语言不一样，并且平台对官方语言的支持最好，这就导致同样的逻辑，我们需要写多套代码。比如Android平台用Java，ios用oc或者swift。于是就有人想到了通过代码转换的方式来减少重复的工作量，这就是所以的代码转换流。 
+这种方式虽然听起来不是很靠谱，但它却是成本和风险都最小的，因为代码转换后就可以用官方提供的各种工具了，和普通开发区别不大。并且转换后，可以利用原生的优点，这也可以减少兼容的问题。 
+目前存在的几种代码转换方式：
+将 Java 转成 Objective-C
+j2objc 能将 Java 代码转成 Objective-C，据说 Google 内部就是使用它来降低跨平台开发成本的，比如 Google Inbox 项目就号称通过它共用了 70% 的代码，效果很显著。 
+可能有人会觉得奇怪，为何 Google 要专门开发一个帮助大家写 Objective-C 的工具？还有媒体说 Google 做了件好事，其实吧，我觉得 Google 这算盘打得不错，因为基本上重要的应用都会同时开发 Android 和 iOS 版本，有了这个工具就意味着，你可以先开发 Android 版本，然后再开发 iOS 版本。。。 
+既然都有成功案例了，这个方案确实值得尝试，而且关键是会 Java 的人多啊，可以通过它来快速移植代码到 Objective-C 中。
+将 Objective-C 转成 Java
+除了有 Java 转成 Objective-C，还有 Objective-C 转成 Java 的方案，那就是 MyAppConverter，比起前面的 j2objc，这个工具更有野心，它还打算将 UI 部分也包含进来，从它已转换的列表中可以看到还有 UIKit、CoreGraphics 等组件，使得有些应用可以不改代码就能转成功，不过这点我并不看好，对于大部分应用来说并不现实。 
+由于目前是收费项目，我没有尝试过，对技术细节也不了解，所以这里不做评价。
+将 Java 转成 C
+Mono 提供了一个将 Java 代码转成 C# 的工具 Sharpen，不过似乎用的人不多，Star 才 118，所以看起来不靠谱。 
+还有 JUniversal 这个工具可以将 Java 转成 C#，但目前它并没有发布公开版本，所以具体情况还待了解，它的一个特色是自带了简单的跨平台库，里面包括文件处理、JSON、HTTP、OAuth 组件，可以基于它来开发可复用的业务逻辑。 
+比起转成 Objective-C 和 Java 的工具，转成 C# 的这两个工具看起来都非常不成熟，估计是用 Windows Phone 的人少。
+XMLVM
+除了前面提到的源码到源码的转换，还有 XMLVM 这种与众不同的方式，它首先将字节码转成一种基于 XML 的中间格式，然后再通过 XSL 来生成不同语言，目前支持生成 C、Objective-C、JavaScript、C#、Python 和 Java。 
+虽然基于一个中间字节码可以方便支持多语言，然而它也导致生成代码不可读，因为很多语言中的语法糖会在字节码中被抹掉，这是不可逆的，以下是一个简单示例生成的 Objective-C 代码，看起来就像汇编：
+  XMLVM_ENTER_METHOD("org.xmlvm.tutorial.ios.helloworld.portrait.HelloWorld", "didFinishLaunchingWithOptions", "?")
+ XMLVMElem _r0;
+ XMLVMElem _r1;
+ XMLVMElem _r2;
+ XMLVMElem _r3;
+ XMLVMElem _r4;
+ XMLVMElem _r5;
+ XMLVMElem _r6;
+ XMLVMElem _r7;
+ _r5.o = me;
+ _r6.o = n1;
+ _r7.o = n2;
+ _r4.i = 0;
+ _r0.o = org_xmlvm_iphone_UIScreen_mainScreen__();
+ XMLVM_CHECK_NPE(0)
+ _r0.o = org_xmlvm_iphone_UIScreen_getApplicationFrame__(_r0.o);
+ _r1.o = __NEW_org_xmlvm_iphone_UIWindow();
+ XMLVM_CHECK_NPE(1)
+...
+终上所述，虽然代码转换这种方式风险小，但我觉得对于很多小 APP 来说共享不了多少代码，因为这类应用大多数围绕 UI 来开发的，大部分代码都和 UI 耦合，所以公共部分不多，其借鉴性意义不大。
+编译流
+编译流比代码转换流的代码转换更进一步，它直接将某个语言编译为普通平台下能够识别的二进制文件。采用这种方式主要有以下特点：
+优点
+可以重用一些实现很复杂的代码，比如之前用 C++ 实现的游戏引擎，重写一遍成本太高
+编译后的代码反编译困难
+缺点
+转换过于复杂，并且后期定位和修改成本会很高
+编译后体积太大，尤其是支持 ARMv8 和 x86等CPU架构的时候
+接下来，我们通过不同的语言来介绍这个流派下不同的技术实现。
+C++方案
+因为目前Android、iOS和Windows Phone都提供了对C++开发的支持。特别是C++ 在实现非界面部分，性能是非常高效的。而如果C++ 要实现非界面部分，还是比较有挑战的。这主要是因为Android 的界面绝大部分是 Java 实现，而在 iOS 和 Windows Phone下可以分别使用C++的超集Objective-C++和 C++/CX来开发。那么要解决用C++开发Android界面，目前主要有两种方案：
+通过 JNI 调用系统提供的 Java 方法
+自己画 UI
+第一种方式虽然可行，但是代码冗余高，实现过于复杂。那第二种方式呢，比如 JUCE 和 QT就是自己用代码画的。不过在Android 5下就悲剧了，很多效果都没出来，比如按钮没有涟漪效果。根本原因在于它是通过 Qt Quick Controls 的自定义样式来模拟的，而不是使用系统UI组件，因此它享受不到系统升级自动带来的界面优化。 
+当然我们可以使用OpenGL来绘制界面，因为EGL+OpenGL本身就是跨平台的。并且目前大多数跨平台游戏底层都是这么做的。 
+既然可以基于 OpenGL 来开发跨平台游戏，是否能用它来实现界面？当然是可行的，而且Android 4的界面就是基于OpenGL的，不过它并不是只用 OpenGL 的 API，那样是不现实的，因为 OpenGL API 最初设计并不是为了画 2D 图形的，所以连画个圆形都没有直接的方法，因此Android 4中是通过Skia将路径转换为位置数组或纹理，然后再交给 OpenGL 渲染的。 
+然而直接使用OpenGL来做界面的绘制，代价是非常大的，并且目前在各个平台下都会有良好的官方支持。因此对于大多数应用来说自己画UI是很不划算的。
+Xamarin
+Xamarin 可以使用 C# 来开发 Android 及 iOS 应用，它是从 Mono 发展而来的，目前看起来商业运作得不错，相关工具及文档都挺健全。 
+因为它在 iOS 下是以 AOT 的方式编译为二进制文件的，所以把它归到编译流来讨论，其实它在 Android 是内嵌了 Mono 虚拟机 来实现的，因此需要装一个 17M 的运行环境。 
+在 UI 方面，它可以通过调用系统 API 来使用系统内置的界面组件，或者基于 Xamarin.Forms 开发定制要求不高的跨平台 UI。 
+对于熟悉 C# 的团队来说，这还真是一个看起来很不错的，但这种方案最大的问题就是相关资料不足，遇到问题很可能搜不到解决方案，不过由于时间关系我并没有仔细研究，推荐看看这篇文章，其中谈到它的优缺点是：
+优点
+开发 app 所需的基本功能全部都有
+有商业支持，而且这个项目对 Windows Phone 很有利，微软会大力支持
+缺点
+如果深入后会发现功能缺失，尤其是定制 UI，因为未开源使得遇到问题时不知道如何修复
+Xamarin 本身有些 Bug
+相关资源太少，没有原生平台那么多第三方库
+Xamarin studio 比起 Xcode 和 Android Studio 在功能上还有很大差距
+Objective-C 编译为 Windows Phone
+微软知道自己的 Windows Phone 太非主流，所以很懂事地推出了将 Objective-C 项目编译到 Windows Phone 上运行的工具，目前这个工具的相关资料很少，鉴于 Visual Studio 支持 Clang，所以极有可能是使用 Clang 的前端来编译，这样最大的好处是以后支持 Swift 会很方便，因此我归到编译流。
+Swift – Apportable/Silver
+apportable 可以直接将 Swift/Objective-C 编译为机器码，但它官网的成功案例全部都是游戏，所以用这个来做 APP 感觉很不靠谱。 
+所以后来它又推出了 Tengu 这个专门针对 APP 开发的工具，它的比起之前的方案更灵活些，本质上有点类似 C++ 公共库的方案，只不过语言变成了 Swift/Objective-C，使用 Swift/Objective-C 来编译生成跨平台的 SO 文件，提供给 Android 调用。 
+另一个类似的是 Silver，不过目前没正式发布，它不仅支持 Swift，还支持 C# 和自创的 Oxygene 语言（看起来像 Pascal），在界面方面它还有个跨平台非 UI 库 Sugar，然而目前 Star 数只有 17，太非主流了，所以不值得研究它。
+Go
+Go做为后端服务开发语言，专门针对多处理器系统应用程序的编程进行了优化，使用Go编译的程序可以媲美C或C++代码的速度，而且更加安全、支持并行进程。Go 从 1.4 版本开始支持开发Android应用（并在1.5 版本支持iOS）。虽然能同时支持Android和ios，但是目前可用的api很少，Go仍然专注于后端语言开发。 
+Android的View层完全是基于Java写的，要想用Go来写UI不可避免要调用Java 代码，而这方面Go还没有简便的方式，目前Go调用外部代码只能使用cgo，通过cgo再调用jni，这就不可避免的需要写很多的中间件。而且 cgo 的实现本身就对性能有损失，除了各种无关函数的调用，它还会锁定一个 Go 的系统线程，这会影响其它 gorountine 的运行，如果同时运行太多外部调用，甚至会导致所有 gorountine 等待 
+所以使用Go开发跨平台移动端应用目前不靠谱。
+虚拟机流
+除了编译为不同平台下的二进制文件，还有另一种常见做法是通过虚拟机来支持跨平台运行，比如 JavaScript 和 Lua 都是天生的内嵌语言，所以在这个流派中很多方案都使用了这两个语言。 
+不过虚拟机流会遇到两个问题：一个是性能损耗，另一个是虚拟机本身也会占不小的体积。
+Java 系
+说到跨平台虚拟机大家都会想到 Java，因为这个语言一开始就是为了跨平台设计的，Sun 的 J2ME 早在 1998 年就有了，在 iPhone 出来前的手机上，很多小游戏都是基于 J2ME 开发的，这个项目至今还活着，能运行在 Raspberry Pi 上。 
+前面提到微软提供了将 Objective-C 编译在 Windows Phone 上运行的工具，在对 Android 的支持上我没找到的详细资料，所以就暂时认为它是虚拟机的方式，从 Astoria 项目的介绍上看它做得非常完善，不仅能支持 NDK 中的 C++，还实现了 Java 的 debug 接口，使得可以直接用 Android Studio 等 IDE 来调试，整个开发体验和在 Android 手机上几乎没区别。 
+另外 BlackBerry 10 也是通过内嵌虚拟机来支持直接运行 Android 应用，不过据说比较卡。 
+不过前面提到 C# 和 Java 在 iOS 端的方案都是通过 AOT 的方式实现的，目前还没见到有 Java 虚拟机的方案，我想主要原因是 iOS 的限制，普通 app 不能调用 mmap、mprotect，所以无法使用 JIT 来优化性能，如果 iOS 开放，或许哪天有人开发一个像微软那样能直接在 iOS 上运行 Android 应用的虚拟机，就不需要跨平台开发了，大家只需要学 Android 开发就够了。
+Titanium/Hyperloop
+Titanium 应该不少人听过，它和 PhoneGap 几乎是同时期的著名跨平台方案，和 PhoneGap 最大的区别是：它的界面没有使用 HTML/CSS，而是自己设计了一套基于 XML 的 UI 框架 Alloy，代码类似下面这个样子：
+  app/styles/index.tss
+ ".container": {
+ backgroundColor:"white"
+ },
+ // This is applied to all Labels in the view
+ "Label": {
+ width: Ti.UI.SIZE,
+ height: Ti.UI.SIZE,
+ color: "#000", // black
+ transform: Alloy.Globals.rotateLeft // value is defined in the alloy.js file
+ },
+ // This is only applied to an element with the id attribute assigned to "label"
+ "#label": {
+ color: "#999" /* gray */
+ }
+前面我们说过由于 CSS 的过于灵活拖累了浏览器的性能，那是否自己建立一套 UI 机制会更靠谱呢？尽管这么做对性能确实有好处，然而它又带来了学习成本问题，做简单的界面问题不大，一旦要深入定制开发就会发现相关资料太少，所以还是不靠谱。
+Titanium 还提供了一套跨平台的 API 来方便调用，这么做是它的优点更是缺点，尤其是下面三个问题：
+API 有限，因为这是由 Titanium 提供的，它肯定会比官方 API 少且有延迟，Titanium 是肯定跟不过来的 
+相关资料及社区有限，比起 Android/iOS 差远了，遇到问题都不知道去哪找答案 
+缺乏第三方库，第三方库肯定不会专门为 Titanium 提供一个版本，所以不管用什么都得自己封装 
+Titanium 也意识到了这个问题，所以目前在开发下一代的解决方案 Hyperloop，它可以将 JavaScript 编译为原生代码，这样的好处是调用原生 API 会比较方便，比如它的 iOS 是这样写的:
+   @import("UIKit");
+ @import("CoreGraphics");
+ var view = new UIView();
+ view.frame = CGRectMake(0, 0, 100, 100);
+这个方案和之前的说的Xamarin如出一辙，也是将JavaScript将翻译为Objective-C然后由官方的方案运行。不过这项目开发都快三年了，但至今仍然是试验阶段，显然有点不靠谱。
+NativeScript
+之前说到 Titanium 自定义 API 带来的各种问题，于是就有人换了个思路，比如前段时间推出的 NativeScript，它的方法说白了就是用工具来自动生成 wrapper API，和系统 API 保持一致。 
+有了这个自动生成 wrapper 的工具，它就能方便基于系统 API 来开发跨平台组件，以简单的 Button 为例，源码在 cross-platform-modules/ui/button 中，它在 Android 下是这样实现的：
+  export class Button extends common.Button {
+ private _android: android.widget.Button;
+ private _isPressed: boolean;
+  public _createUI() {
+ var that = new WeakRef(this);
+ this._android = new android.widget.Button(this._context);
+ this._android.setOnClickListener(new android.view.View.OnClickListener({
+ get owner() {
+ return that.get();
+ },
+ onClick: function (v) {
+ if (this.owner) {
+ this.owner._emit(common.knownEvents.tap);
+ }
+ }
+ }));
+ }
+ }
+在 iOS 下是这样实现的：
+   export class Button extends common.Button {
+ private _ios: UIButton;
+ private _tapHandler: NSObject;
+ private _stateChangedHandler: stateChanged.ControlStateChangeListener;
+  constructor() {
+ super();
+ this._ios = UIButton.buttonWithType(UIButtonType.UIButtonTypeSystem);
+  this._tapHandler = TapHandlerImpl.new().initWithOwner(this);
+ this._ios.addTargetActionForControlEvents(this._tapHandler, "tap", UIControlEvents.UIControlEventTouchUpInside);
+  this._stateChangedHandler = new stateChanged.ControlStateChangeListener(this._ios, (s: string) => {
+ this._goToVisualState(s);
+ });
+ }
+  get ios(): UIButton {
+ return this._ios;
+ }
+ }
+可以看到用法和官方 SDK 中的调用方式是一样的，只不过语言换成了 JavaScript，并且写法看起来比较诡异罢了，风格类似前面的 Hyperloop 类似，所以也同样会有语法转换的问题。 
+这么做最大的好处就是能完整支持所有系统 API，对于第三方库也能很好支持，但它目前最大缺点是生成的文件体积过大，即便什么都不做，生成的 apk 文件也有 8.4 MB，因为它将所有 API binding 都生成了，而且这也导致在 Android 下首次打开速度很慢。 
+从底层实现上看，NativeScript 在 Android 下内嵌了 V8，而在 iOS 下内嵌了自己编译的 JavaScriptCore（这意味着没有 JIT 优化，具体原因前面提到了），这样的好处是能调用更底层的 API，也避免了不同操作系统版本下 JS 引擎不一致带来的问题，但后果是生成文件的体积变大和在 iOS 下性能不如 WKWebView。 
+WKWebView 是基于多进程实现的，它在 iOS 的白名单中，所以能支持 JIT。它的使用体验很不错，做到了一键编译运行，而且还有 MVVM 的支持，能进行数据双向绑定。 
+在我看来 NativeScript 和 Titanium 都有个很大的缺点，那就是排它性太强，如果你要用这两个方案，就得完整基于它们进行开发，不能在某些 View 下进行尝试，也不支持直接嵌入第三方 View，有没有方案能很好地解决这两个问题？有，那就是我们接下来要介绍的 React Native。
+React Native
+React Native是由FaceBook开源的基于JavaScript和React搭建的一套跨平台开发框架。而在设计之初，React Native采用就是在不同平台下使用平台自带的UI组件。以为它采用JavaScript和React来开发，所以获得了不少前端程序猿的青睐。 
+有人说，React Native采用js等前端技术是回归H5，但其实 React Native和Web 扯不上太多关系。ReactNative虽然借鉴了CSS中的Flexbox、navigator、XMLHttpRequest 等Api的写法，但是大部分还是通过原生的组件或者自己封装的组件来开发的。就像FaceBooK的内部软件Facebook Groups，iOS版本很大一部分基于React Native开发，其中用到了不少内部通用组件。 
+React Native相比传统Objective-C和UIView，学习成本更低了，熟悉JavaScript 的开发者可以在半天写个使用标准UI界面，而且用XML+CSS 画界面也远比 UIView 中用 Frame 进行手工布局更易读。在加上React Native师出名门，截止目前，React Native已更新到0.4.2版本，并且逐步趋于稳定。由于其更加接近原生的体验，国内一些大厂纷纷加入，诸如阿里、腾讯、美团等纷纷开始自己app想React Native的改造。
+React Native代码：
+  @implementation ArticleComponent
++ (instancetype)newWithArticle:(ArticleModel *)article
+ {
+ return [super newWithComponent:
+ [CKStackLayoutComponent
+ newWithView:{}
+ size:{}
+ style:{
+ .direction = CKStackLayoutDirectionVertical,
+ }
+ children:{
+ {[HeaderComponent newWithArticle:article]},
+ {[MessageComponent newWithMessage:article.message]},
+ {[FooterComponent newWithFooter:article.footer]},
+ }];
+ }
+ ...
+很多人觉得跨平台从来都不靠谱，但其实是有的，那就是 Web，这个历史上最成功的例子，就像当年web挤掉pc成为互联网的主流一样，未来的互联网必将是web的时代。发布
