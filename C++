@@ -1,5 +1,6 @@
 https://github.com/fanchy/fflua C++调用Lua脚本。
-
+https://wiki.analog.com/resources/tools-software/linux-software/libiio#libiio_-_ad9361_iio_streaming_example What is libiio?
+Libiio is a library that has been developed by Analog Devices to ease the development of software interfacing Linux Industrial I/O (IIO) devices.
 卡拉比－丘流形
 
 从事C++的开发，中间遇到了各种内存的问题，比如内存泄露，内存越界，内存空洞等等，把中间的方法和思想都总结一下，希望可以给大家定位C/C++的内存问题提供一些思路。
