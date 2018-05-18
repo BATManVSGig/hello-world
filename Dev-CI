@@ -1,3 +1,34 @@
+背景
+git是目前最先进的也是使用最多的分布式代码版本控制器，使用前需要现在各自的电脑上安装好git，网上很容易找到。
+本文是在智能家居app开发过程中遇到的一些问题和解决经验的总结，更偏向实际操作中的问题解决，而不是git使用的全面教程。
+常用git命令以及使用中遇到的问题处理
+1.        查询历史命令记录
+history
+2.        从远程新下载一个工程(记得改一下用户名和远程分支名)
+git clone http://w00438088@rnd-ott.huawei.com/hw-ws/hiapp/ios/smarthome -b hw/sz/mbb_home/platform/hiapp/master
+3.        拉去库上的更新
+git pull
+4.        如果在拉取时本地有修改导致pull冲突可以先使用git stash将本地的修改储藏，在pull后使用git stash pop取出储藏的本地代码，在checkout切换branch时也可以使用，如果有sourceTree，则可以搭配着可视化操作更方便
+5.        git commit操作我习惯使用Xcode提供的可视化操作，非常直观自己要提交哪些代码很方便操作
+6.        推送到库上（：左侧为本地分支名，右侧为远程分支名）
+git push origin hw/sz/mbb_home/platform/hiapp/master:refs/for/hw/sz/mbb_home/platform/hiapp/master
+7.        git reset的使用（soft为只将缓存区重置为该commit，本地代码不变，hard本地和缓存区都重置，会覆盖掉本地修改，谨慎操作）
+git reset --soft 385e6b7bd7645760d054eb7efe6c4d29c2cc2f24
+git reset --hard 385e6b7bd7645760d054eb7efe6c4d29c2cc2f24
+8.        查询所有分支
+git branch –a
+9.        查询当前分支下的提交记录
+git log
+10.     上单个commit
+git cherry-pick 4727bb963ccfac838cbb84ffa937f2d69a35a1a3
+11.     将hw/sz/mbb_home/platform/hiapp/master分支合并到当前分支
+git merge hw/sz/mbb_home/platform/hiapp/master
+12.     新建分支(May是新建的本地分支名，origin/hw/sz/mbb_home/release/hiapp/May是远程分支名)
+git checkout -b May origin/hw/sz/mbb_home/release/hiapp/May
+13.     切换分支（hw/sz/mbb_home/platform/hiapp/master为新的分支名称）
+git checkout hw/sz/mbb_home/platform/hiapp/master
+14.     git 处理冲突（尤其是当配置文件project.pbxproj有冲突需要在finder里打开该文件进行冲突的处理，smarthome项目目录是/smarthome/HiPlatform/SmartHome/SmartHome.xcodeproj，右击显示包内容，找到并打开project.pbxproj，处理冲突）
+
 
 搭建基于Gerrit、Jenkins、Git的CI环境	   
 目录
